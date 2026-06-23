@@ -1538,17 +1538,12 @@ export default function ChartsView({ onNavigate, theme, toggleTheme }) {
         {/* Sidebar */}
         <aside className="sidebar">
           <div className="card" style={{ padding: '12px 14px' }}>
-            <div
-              className="card-title collapsible-header"
-              onClick={() => {
-                if (typeof window !== 'undefined' && window.innerWidth <= 900) {
-                  setIsConfigCollapsed(!isConfigCollapsed);
-                }
-              }}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: typeof window !== 'undefined' && window.innerWidth <= 900 ? 'pointer' : 'default', margin: 0 }}
-            >
-              <span>Configuration</span>
-              <span className="mobile-only-toggle" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '9px', color: 'var(--text-dim)', letterSpacing: '0.5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isConfigCollapsed ? 0 : '10px' }}>
+              <span className="card-title" style={{ margin: 0 }}>CONFIGURATION</span>
+              <button
+                className="scanner-filters-toggle-btn mobile-only-toggle"
+                onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
+              >
                 <span>{isConfigCollapsed ? 'SHOW' : 'HIDE'}</span>
                 <svg
                   width="12"
@@ -1563,7 +1558,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme }) {
                 >
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
-              </span>
+              </button>
             </div>
 
             <div className={`sidebar-collapsible ${isConfigCollapsed ? '' : 'expanded'}`} style={{ width: '100%', display: isConfigCollapsed ? 'none' : 'flex', flexDirection: 'column', gap: '12px', marginTop: isConfigCollapsed ? '0' : '12px' }}>

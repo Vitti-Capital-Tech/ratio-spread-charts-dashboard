@@ -44,7 +44,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme }) {
 
   // Configurable thresholds initialized from localStorage
   const [config, setConfig] = useState(() => {
-    const saved = localStorage.getItem('vitti_algo_config');
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('vitti_algo_config') : null;
     const base = {
       minStrikeDiff: 800,
       minIvDiff: 5,
