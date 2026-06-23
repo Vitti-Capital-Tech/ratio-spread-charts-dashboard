@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Ratio Spread Charts Dashboard
+
+A high-performance, real-time cryptocurrency options trading dashboard built with Next.js. It features an advanced Ratio Spread Scanner for discovering delta-neutral trading opportunities and a comprehensive Interactive Options Charting tool for tracking combined premium strategies.
+
+## Key Features
+
+* **Ratio Spread Scanner:** Continuously monitors live options data from Delta Exchange to find optimal Call and Put ratio spread opportunities. Features dynamic filtering, ATM ratio scaling, and ROI calculations based on real-time order books.
+* **Interactive Option Charts:** Visualizes option premiums with high fidelity. Supports charting individual Call/Put legs or combining them to visualize advanced strategies (like straddles and strangles). Features simple moving averages (SMA), implied volatility (IV) curves, price alerts, and support/resistance drawing tools.
+* **Cross-Tab Synchronization:** Seamlessly shares state (like the top spread picks) across browser tabs using the `BroadcastChannel` API.
+* **Responsive Dark/Light Mode:** A sleek, fully responsive design optimized for both desktop and mobile views.
+
+## Technology Stack
+
+* **Framework:** [Next.js](https://nextjs.org/) (App Router)
+* **UI Library:** React
+* **Charting:** [Lightweight-Charts](https://tradingview.github.io/lightweight-charts/) by TradingView
+* **Data Sources:** Delta Exchange (REST API & WebSockets)
+* **Styling:** Vanilla CSS with custom design tokens
+
+## Architecture Documentation
+
+For detailed information on how the application works under the hood, please refer to the following design documents:
+
+* [High-Level Design (HLD)](./docs/HLD.md) - Overall system architecture and data flow.
+* [Low-Level Design (LLD)](./docs/LLD.md) - Component internals, WebSocket buffering, and state management.
+* [Ratio Spread Logic Explained](./docs/ratio_spread_explained.md) - The math and filtering logic behind the scanner.
+* [Charting Logic Explained](./docs/charts_explained.md) - How combined OHLC candles are generated and corrected.
 
 ## Getting Started
 
-First, run the development server:
+First, install the dependencies:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. The application proxies API requests to Delta Exchange seamlessly using Next.js `rewrites` configuration.
