@@ -5,7 +5,7 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
+        source: '/api/:path((?!auth).*)',
         destination: 'https://api.india.delta.exchange/:path*',
       },
       {

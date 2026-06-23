@@ -1,7 +1,8 @@
 "use client";
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { authClient } from '@/lib/auth-client';
 
 export default function Navbar({
   theme,
@@ -12,8 +13,16 @@ export default function Navbar({
   extraHeaderContent
 }) {
   const pathname = usePathname();
-  const activeTab = pathname.includes('/ratio-spread') ? 'scanner' :
-    pathname.includes('/trading') ? 'trading' : 'charts';
+  const router = useRouter();
+  const { data: session } = authClient.useSession();
+  const user = session?.user;
+
+  const activeTab = pathname.includes('/ratio-spread') ? 'scanner' : 'charts';
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    router.push('/');
+  };
 
   return (
     <>
@@ -89,6 +98,26 @@ export default function Navbar({
               )}
             </button>
           )}
+
+          {!user ? (
+            <Link href="/sign-in" className="nav-tab" style={{ padding: '6px 14px', background: 'var(--accent)', color: '#000', border: 'none', textDecoration: 'none' }}>
+              Sign In / 2FA
+            </Link>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '14px', color: 'var(--text-dim)' }}>
+                {user.email}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="nav-tab"
+                style={{ padding: '6px 14px', background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)' }}
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+
           <div className="ws-badge">
             <div className={`ws-dot ${badgeDotClassName || ''}`} style={badgeColor ? { background: badgeColor } : undefined} />
             <span>{badgeLabel || 'Disconnected'}</span>

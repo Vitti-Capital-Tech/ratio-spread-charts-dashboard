@@ -26,6 +26,33 @@ For detailed information on how the application works under the hood, please ref
 * [Ratio Spread Logic Explained](./docs/ratio_spread_explained.md) - The math and filtering logic behind the scanner.
 * [Charting Logic Explained](./docs/charts_explained.md) - How combined OHLC candles are generated and corrected.
 
+## Authentication & Security Setup
+
+The dashboard uses **Better Auth** for secure, passwordless 2-Factor Authentication (2FA) via 6-digit email OTPs. Session states are stored in a **Supabase PostgreSQL database**, and emails are sent using the **Resend SDK**.
+
+### Prerequisites
+Add the following to your `.env.local` file:
+
+```env
+# Better Auth Configuration
+BETTER_AUTH_SECRET=your_32_character_random_secret
+BETTER_AUTH_URL=http://localhost:3000
+
+# Database Direct Connection URL (Supabase)
+DATABASE_URL=postgresql://postgres:[password]@db.[project-id].supabase.co:5432/postgres
+
+# Resend API Key for Email Delivery
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM_EMAIL=auth@yourdomain.com # Defaults to onboarding@resend.dev in development
+```
+
+### Initializing the Auth Database Schema
+Before running the dashboard, generate the necessary authentication tables (`user`, `session`, `account`, `verification`) in your database:
+
+```bash
+npx @better-auth/cli@latest migrate
+```
+
 ## Getting Started
 
 First, install the dependencies:
