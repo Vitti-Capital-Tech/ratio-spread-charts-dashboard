@@ -10,18 +10,52 @@ const SCANNER_TOP_KEY = 'vitti_scanner_top_spreads_v1';
 
 import ResultTable from './ResultTable';
 import { normalizeIv, toFiniteNumber, matchesOptionType } from '../lib/scannerUtils';
-import Navbar from './Navbar';
 import CustomSelect from './common/CustomSelect';
 import CustomInput from './common/CustomInput';
 
 // ── Main Scanner Component ──────────────────────────────────────────────────
-export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme }) {
+export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, setNavbarProps }) {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [underlying, setUnderlying] = useState('BTC');
   const [products, setProducts] = useState([]);
   const [expiries, setExpiries] = useState([]);
   const [selExpiry, setSelExpiry] = useState('');
   const [spotPrice, setSpotPrice] = useState(null);
   const [scanning, setScanning] = useState(false);
+
+  // Mount effect: Load from localStorage
+  useEffect(() => {
+    const savedUnderlying = localStorage.getItem('vitti_scanner_underlying');
+    if (savedUnderlying) setUnderlying(savedUnderlying);
+
+    const savedExpiry = localStorage.getItem('vitti_scanner_expiry');
+    if (savedExpiry) setSelExpiry(savedExpiry);
+
+    const savedScanning = localStorage.getItem('vitti_scanner_scanning') === 'true';
+    if (savedScanning) setScanning(savedScanning);
+
+    setIsLoaded(true);
+  }, []);
+
+  // Save effects: Run only when isLoaded is true
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('vitti_scanner_underlying', underlying);
+    }
+  }, [underlying, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded && selExpiry) {
+      localStorage.setItem('vitti_scanner_expiry', selExpiry);
+    }
+  }, [selExpiry, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('vitti_scanner_scanning', String(scanning));
+    }
+  }, [scanning, isLoaded]);
+
   const [resultsCall, setResultsCall] = useState([]);
   const [resultsPut, setResultsPut] = useState([]);
   const [globalAtmStrike, setGlobalAtmStrike] = useState(null);
@@ -34,6 +68,16 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme }) {
   const [activeTableTab, setActiveTableTab] = useState('call');
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
   useEffect(() => { setIsFiltersCollapsed(window.innerWidth <= 900); }, []);
+
+  useEffect(() => {
+    if (setNavbarProps) {
+      const count = Object.keys(tickerData).length;
+      setNavbarProps({
+        badgeLabel: scanning ? `Scanning · ${count} tickers` : 'Idle',
+        badgeDotClassName: scanning ? 'live' : ''
+      });
+    }
+  }, [scanning, tickerData, setNavbarProps]);
 
   const wsRef = useRef(null);
   const scanIntervalRef = useRef(null);
@@ -539,6 +583,13 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme }) {
     stopScan();
   }, [stopScan]);
 
+  // Auto-start scanning on load if scanner state is set to scan
+  useEffect(() => {
+    if (scanning && selExpiry && products.length && !wsRef.current) {
+      startScan();
+    }
+  }, [scanning, selExpiry, products, startScan]);
+
   // Cleanup on unmount
   useEffect(() => () => {
     if (wsRef.current) wsRef.current.close();
@@ -552,15 +603,6 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme }) {
 
   return (
     <div className="app">
-      {/* Navbar */}
-      <Navbar
-        activeTab="scanner"
-        onNavigate={onNavigate}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        badgeLabel={scanning ? `Scanning · ${tickerCount} tickers` : 'Idle'}
-        badgeDotClassName={scanning ? 'live' : ''}
-      />
 
       <div className="body scanner-body" style={{ flexDirection: 'column' }}>
 

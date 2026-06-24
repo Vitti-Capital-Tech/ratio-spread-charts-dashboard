@@ -25,7 +25,7 @@ export default function CustomSelect({
     };
   }, []);
 
-  const selectedOption = options.find(opt => opt.value === value) || options[0];
+  const selectedOption = options.find(opt => opt.value === value || (opt.value != null && value != null && String(opt.value) === String(value))) || options[0];
 
   return (
     <div className={`custom-dropdown-container ${className} ${disabled ? 'disabled' : ''} variant-${variant}`} style={style} ref={dropdownRef}>
@@ -59,7 +59,7 @@ export default function CustomSelect({
         <div className="custom-dropdown-menu">
           <div className="custom-dropdown-list">
             {options.map(opt => {
-              const isSelected = opt.value === value;
+              const isSelected = opt.value === value || (opt.value != null && value != null && String(opt.value) === String(value));
               return (
                 <button
                   key={opt.value}

@@ -10,7 +10,6 @@ import {
   createWS, TF_SECS
 } from '../lib/api';
 import { useTabListener } from '../lib/useTabSync';
-import Navbar from './Navbar';
 import CustomSelect from './common/CustomSelect';
 import CustomInput from './common/CustomInput';
 
@@ -671,12 +670,15 @@ const ChartPanel = forwardRef(function ChartPanel({
 });
 
 // ── App ───────────────────────────────────────────────────────────────────────
-export default function ChartsView({ onNavigate, theme, toggleTheme }) {
+export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarProps }) {
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
   useEffect(() => { setIsConfigCollapsed(window.innerWidth <= 900); }, []);
+  
+  const [isLoaded, setIsLoaded] = useState(false);
   const [underlying, setUnderlying] = useState('BTC');
   const [tf, setTf] = useState('1m');
   const [priceType, setPriceType] = useState('mark');
+
   const [products, setProducts] = useState([]);
   const [expiries, setExpiries] = useState([]);
   const [strikes, setStrikes] = useState([]);
@@ -689,8 +691,71 @@ export default function ChartsView({ onNavigate, theme, toggleTheme }) {
   const [watchList, setWatchList] = useState([]);
   const watchListRef = useRef(watchList);
   useEffect(() => { watchListRef.current = watchList; }, [watchList]);
+  
   const [listData, setListData] = useState({}); // Stores { price, high, low } per item ID
   const [selectedWatchId, setSelectedWatchId] = useState(null);
+
+  // Mount effect: Load from localStorage
+  useEffect(() => {
+    const savedUnderlying = localStorage.getItem('vitti_charts_underlying');
+    if (savedUnderlying) setUnderlying(savedUnderlying);
+
+    const savedTf = localStorage.getItem('vitti_charts_tf');
+    if (savedTf) setTf(savedTf);
+
+    const savedPriceType = localStorage.getItem('vitti_charts_price_type');
+    if (savedPriceType) setPriceType(savedPriceType);
+
+    const savedLegType = localStorage.getItem('vitti_charts_leg_type');
+    if (savedLegType) setLegType(savedLegType);
+
+    const savedWatchlist = localStorage.getItem('vitti_charts_watchlist');
+    if (savedWatchlist) {
+      try {
+        setWatchList(JSON.parse(savedWatchlist));
+      } catch (e) {}
+    }
+
+    const savedSelectedWatchId = localStorage.getItem('vitti_charts_selected_watch_id');
+    if (savedSelectedWatchId) setSelectedWatchId(savedSelectedWatchId);
+
+    setIsLoaded(true);
+  }, []);
+
+  // Save effects: Run only when isLoaded is true
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('vitti_charts_underlying', underlying);
+    }
+  }, [underlying, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('vitti_charts_tf', tf);
+    }
+  }, [tf, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('vitti_charts_price_type', priceType);
+    }
+  }, [priceType, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('vitti_charts_leg_type', legType);
+    }
+  }, [legType, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      if (selectedWatchId) {
+        localStorage.setItem('vitti_charts_selected_watch_id', selectedWatchId);
+      } else {
+        localStorage.removeItem('vitti_charts_selected_watch_id');
+      }
+    }
+  }, [selectedWatchId, isLoaded]);
 
   // ── Cross-tab sync for Watchlist ─────────────────────────────────────────
   const isRemoteUpdateRef = useRef(false);
@@ -721,12 +786,15 @@ export default function ChartsView({ onNavigate, theme, toggleTheme }) {
 
   useEffect(() => {
     watchListRef.current = watchList;
+    if (isLoaded) {
+      localStorage.setItem('vitti_charts_watchlist', JSON.stringify(watchList));
+    }
     if (isRemoteUpdateRef.current) {
       isRemoteUpdateRef.current = false;
       return;
     }
     tabBroadcast('WATCHLIST_SYNC', { watchList });
-  }, [watchList, tabBroadcast]);
+  }, [watchList, tabBroadcast, isLoaded]);
   // ─────────────────────────────────────────────────────────────────────────
 
   const addToWatchList = async () => {
@@ -824,6 +892,16 @@ export default function ChartsView({ onNavigate, theme, toggleTheme }) {
   // Track what symbol the charts currently show
   const [activeCall, setActiveCall] = useState('');
   const [activePut, setActivePut] = useState('');
+
+  useEffect(() => {
+    if (setNavbarProps) {
+      setNavbarProps({
+        badgeLabel: wsStatus === 'live' ? 'Live Feed' : wsStatus === 'error' ? 'WS Error' : 'Disconnected',
+        badgeDotClassName: wsStatus === 'live' ? 'live' : wsStatus === 'error' ? 'offline' : 'stale',
+        extraHeaderContent: activeCall ? `${activeCall} / ${activePut}` : null
+      });
+    }
+  }, [wsStatus, activeCall, activePut, setNavbarProps]);
 
   const [alertLogs, setAlertLogs] = useState([]);
 
@@ -1017,13 +1095,13 @@ export default function ChartsView({ onNavigate, theme, toggleTheme }) {
     if (!ss.length) return;
     getSpotPrice(underlying)
       .then(spot => {
-        const atm = String(findATM(ss, spot));
+        const atm = findATM(ss, spot);
         setSelCallStrike(atm);
         setSelPutStrike(atm);
       })
       .catch(() => {
-        setSelCallStrike(String(ss[0]));
-        setSelPutStrike(String(ss[0]));
+        setSelCallStrike(ss[0]);
+        setSelPutStrike(ss[0]);
       });
   }, [selExpiry, products, underlying]);
 
@@ -1516,23 +1594,6 @@ export default function ChartsView({ onNavigate, theme, toggleTheme }) {
           </div>
         ))}
       </div>
-
-      {/* Navbar */}
-      <Navbar
-        activeTab="charts"
-        onNavigate={onNavigate}
-        theme={theme}
-        toggleTheme={toggleTheme}
-        badgeLabel={wsStatus === 'live' ? 'Live Feed' : wsStatus === 'error' ? 'WS Error' : 'Disconnected'}
-        badgeDotClassName={wsStatus === 'live' ? 'live' : wsStatus === 'error' ? 'offline' : 'stale'}
-        extraHeaderContent={
-          activeCall && (
-            <span style={{ fontFamily: 'Inter', fontSize: 11, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
-              {activeCall} / {activePut}
-            </span>
-          )
-        }
-      />
 
       <div className="body">
         {/* Sidebar */}
