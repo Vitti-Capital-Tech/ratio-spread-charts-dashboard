@@ -85,6 +85,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
   const tickerBufferRef = useRef({});
   const flushTimerRef = useRef(null);
   const lastScanTimeRef = useRef(0);
+  const scanIdRef = useRef(0);
 
   // Configurable thresholds initialized from localStorage
   const [config, setConfig] = useState(() => {
@@ -185,19 +186,29 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       setProducts(prods);
       const exps = getExpiries(prods);
       setExpiries(exps);
-      if (exps.length && (!selExpiry || !exps.includes(selExpiry))) {
-        setSelExpiry(exps[0]);
-      }
     } catch (e) { console.error('Failed to load products:', e); }
-  }, [underlying, selExpiry]);
+  }, [underlying]);
 
   // ── Load products on underlying change ──────────────────────────────────
   useEffect(() => {
-    setExpiries([]); setSelExpiry(''); setResultsCall([]); setResultsPut([]);
+    setExpiries([]); setResultsCall([]); setResultsPut([]);
     setTickerData({});
+    latestTickerDataRef.current = {};
+    tickerBufferRef.current = {};
     setExpectedTickerCount(0);
     refreshProducts();
   }, [underlying]);
+
+  // ── Handle default expiry selection reactive to expiries ────────────────
+  useEffect(() => {
+    if (expiries.length) {
+      if (!selExpiry || !expiries.includes(selExpiry)) {
+        setSelExpiry(expiries[0]);
+      }
+    } else {
+      setSelExpiry('');
+    }
+  }, [expiries, selExpiry]);
 
   // ── Periodically refresh products to catch expiries and rollover ────────
   useEffect(() => {
@@ -225,6 +236,8 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       return;
     }
 
+    const scanId = ++scanIdRef.current; // Increment active scan session ID
+
     // Close any existing WS
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
@@ -251,7 +264,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       return;
     }
 
-    const symbolMeta = {};     // symbol -> { strike, lotSize, type }
+    const symbolMeta = {};     // symbol -> { strike, lotSize, type, underlying, expiry }
     for (const strike of strikes) {
       // Find Call
       const callProd = products.find(p =>
@@ -262,7 +275,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       if (callProd) {
         const sym = callProd.symbol;
         const lotSize = parseFloat(callProd.contract_size ?? callProd.quoting_precision ?? 1);
-        symbolMeta[sym] = { strike: parseFloat(strike), lotSize, type: 'call' };
+        symbolMeta[sym] = { strike: parseFloat(strike), lotSize, type: 'call', underlying, expiry: selExpiry };
       }
 
       // Find Put
@@ -274,7 +287,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       if (putProd) {
         const sym = putProd.symbol;
         const lotSize = parseFloat(putProd.contract_size ?? putProd.quoting_precision ?? 1);
-        symbolMeta[sym] = { strike: parseFloat(strike), lotSize, type: 'put' };
+        symbolMeta[sym] = { strike: parseFloat(strike), lotSize, type: 'put', underlying, expiry: selExpiry };
       }
     }
 
@@ -288,6 +301,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
     // REST Backfill
     try {
       const restTickers = await getTickers(underlying, allSymbols);
+      if (scanId !== scanIdRef.current) return; // Guard: ignore if scan session changed
       if (restTickers && Array.isArray(restTickers)) {
         for (const t of restTickers) {
           const sym = t.symbol;
@@ -307,6 +321,8 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
           latestTickerDataRef.current[sym] = {
             symbol: sym,
+            underlying,
+            expiry: selExpiry,
             strike,
             lotSize,
             type,
@@ -335,6 +351,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
     const stream = createTickerStream(
       allSymbols,
       (msg) => {
+        if (scanId !== scanIdRef.current) return; // Guard: ignore messages for stale scan sessions
         const sym = msg.symbol;
         const perpSymbol = `${underlying}USD`;
         if (sym === perpSymbol) {
@@ -359,10 +376,12 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
         const meta = symbolMeta[sym];
         if (!meta) return;
 
-        const { strike, lotSize, type } = meta;
+        const { strike, lotSize, type, underlying: symUnderlying, expiry: symExpiry } = meta;
         const prevBuffered = tickerBufferRef.current[sym] ?? tickerData[sym];
         tickerBufferRef.current[sym] = {
           symbol: sym,
+          underlying: symUnderlying,
+          expiry: symExpiry,
           strike,
           lotSize,
           type,
@@ -499,7 +518,9 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       return validPairs;
     };
 
-    const allTickers = Object.values(latestTickerDataRef.current);
+    const allTickers = Object.values(latestTickerDataRef.current).filter(
+      t => t.underlying === underlying && t.expiry === selExpiry
+    );
 
     // Find ATM strike (closest to spotPrice)
     let atmStrike = null;
@@ -546,6 +567,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
   // ── Stop scanning ──────────────────────────────────────────────────────
   const stopScan = useCallback(() => {
+    scanIdRef.current++; // Invalidate any running scan stream callbacks
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
     if (flushTimerRef.current) {
@@ -553,6 +575,8 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       flushTimerRef.current = null;
     }
     tickerBufferRef.current = {};
+    latestTickerDataRef.current = {}; // Clean up refs
+    setTickerData({}); // Reset state ticker data to prevent stale display
     setScanning(false);
     setExpectedTickerCount(0);
     const payload = { underlying, expiry: selExpiry, timestamp: Date.now(), callTop3: [], putTop3: [] };
