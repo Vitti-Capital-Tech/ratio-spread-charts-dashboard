@@ -71,7 +71,7 @@ Unlike Paper Trading parameters which are synchronized with Supabase databases, 
 ## The Scan Loop
 
 To keep the UI highly responsive without freezing the browser thread under heavy WebSocket bursts:
-* **Buffered WebSocket Telemetry**: Incoming ticks are batched into a temporary buffer and flushed to React state at most once every **50 milliseconds**.
+* **Buffered WebSocket Telemetry**: Incoming ticks are batched into a temporary buffer and flushed to React state at most once every **50 milliseconds**. To prevent data leakage from old subscriptions (e.g., when rapidly switching between BTC and ETH), every tick is verified against an active **Scan Session ID** before buffering.
 * **Throttled Spread Computation**: The actual scanning logic (`computeSpreads`) is rate-limited to run at most once every **2 seconds** during live streaming.
 * **Instant Config Updates**: Whenever the user edits configuration thresholds (e.g., changes *Min Strike Diff* or *Max Ratio*), the 2-second throttle is bypassed, refreshing results instantly.
 

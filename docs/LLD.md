@@ -34,6 +34,12 @@ Instead:
 3. The timer reads the `useRef` object, commits it to `useState` (e.g., `setTickerData`), and clears the buffer.
 4. React renders the updated state to the DOM exactly once per interval.
 
+### Addressing Asynchronous Callbacks and Race Conditions
+Because WebSocket callbacks and references exist outside the strict React render lifecycle, closing a stream via `ws.close()` does not immediately prevent in-flight messages from triggering old callbacks. 
+To prevent stale ticks (e.g., mixing BTC strikes with ETH strikes after an asset switch) from polluting shared cache references:
+1. **Session Identifiers (`scanIdRef`):** Every new data stream is issued an incrementing session ID (`scanIdRef.current`). Asynchronous REST backfills and WebSocket callbacks immediately abort if their closure's ID does not match the active session ID.
+2. **Strict Context Enrichment:** Ticker cache entries are enriched with their source `underlying` and `expiry` tags. Components strictly filter down state objects (`Object.values(latestTickerDataRef.current).filter(...)`) before performing any algorithmic loops to guarantee cross-asset isolation.
+
 ## 3. Component Details
 
 ### 3.1 `RatioSpreadScanner.jsx`
