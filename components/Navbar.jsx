@@ -68,7 +68,6 @@ export default function Navbar({
         </div>
 
         <div className="nav-actions-container">
-          {extraHeaderContent}
           {toggleTheme && (
             <button className="nav-tab" onClick={toggleTheme} title="Toggle Theme" style={{ padding: '6px' }}>
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}

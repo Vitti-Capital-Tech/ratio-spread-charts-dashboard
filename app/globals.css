@@ -82,7 +82,10 @@ body,
   height: 48px;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(240, 185, 11, 0.12), 0 2px 8px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+  position: relative;
+  z-index: 100;
 }
 
 .logo {
@@ -91,11 +94,13 @@ body,
   font-size: 15px;
   letter-spacing: 1px;
   color: var(--accent);
+  text-shadow: 0 0 20px rgba(240, 185, 11, 0.25);
 }
 
 .logo span {
   color: var(--text-dim);
   font-weight: 400;
+  text-shadow: none;
 }
 
 .nav-tabs-container {
@@ -111,26 +116,56 @@ body,
 }
 
 .ws-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
   color: var(--text-dim);
   font-family: 'Inter', sans-serif;
+  padding: 4px 10px 4px 8px;
+  border-radius: 20px;
+  background: rgba(43, 47, 54, 0.6);
+  border: 1px solid var(--border);
+  letter-spacing: 0.2px;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.ws-badge:has(.ws-dot.live),
+.ws-badge:has(.ws-dot.online) {
+  background: rgba(14, 203, 129, 0.07);
+  border-color: rgba(14, 203, 129, 0.25);
+  color: #0ecb81;
 }
 
 .ws-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--danger);
+  flex-shrink: 0;
   transition: background 0.3s;
 }
 
 .ws-dot.live,
 .ws-dot.online {
   background: #0ecb81;
-  box-shadow: 0 0 6px #0ecb81;
+  box-shadow: 0 0 0 0 rgba(14, 203, 129, 0.6);
+  animation: ws-sonar 2s ease-in-out infinite;
+}
+
+@keyframes ws-sonar {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 203, 129, 0.6);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(14, 203, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 203, 129, 0);
+  }
 }
 
 .ws-dot.stale {
@@ -276,7 +311,7 @@ select:disabled {
 .btn-start {
   width: 100%;
   background: var(--accent);
-  border: none;
+  border: 1px solid var(--accent);
   border-radius: 6px;
   color: #000;
   font-weight: 700;
@@ -284,16 +319,24 @@ select:disabled {
   letter-spacing: 1px;
   padding: 10px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 0 0 0 rgba(240, 185, 11, 0);
 }
 
-.btn-start:hover {
-  background: #00f0b5;
+.btn-start:hover:not(:disabled) {
+  background: #fcd535;
+  box-shadow: 0 4px 16px rgba(240, 185, 11, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-start:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: none;
 }
 
 .btn-start:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -453,7 +496,7 @@ select:disabled {
   align-items: center;
   gap: 6px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 6px;
   color: var(--text-dim);
   padding: 6px 14px;
@@ -463,19 +506,32 @@ select:disabled {
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.3px;
+  position: relative;
 }
 
 .nav-tab:hover {
-  border-color: var(--accent);
+  border-color: rgba(240, 185, 11, 0.2);
   color: var(--text);
-  background: rgba(0, 217, 163, 0.04);
+  background: rgba(240, 185, 11, 0.04);
 }
 
 .nav-tab.active {
-  background: rgba(0, 217, 163, 0.1);
-  border-color: var(--accent);
+  background: rgba(240, 185, 11, 0.07);
+  border-color: rgba(240, 185, 11, 0.3);
   color: var(--accent);
-  box-shadow: 0 0 12px rgba(0, 217, 163, 0.08);
+}
+
+/* Gold underline indicator for active tab */
+.nav-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 6px rgba(240, 185, 11, 0.4);
 }
 
 .nav-tab-icon {
@@ -585,39 +641,40 @@ select:disabled {
 .scanner-table th {
   background: var(--bg3);
   color: var(--text-dim);
-  font-weight: 600;
-  font-size: 8.5px;
-  letter-spacing: 0.2px;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  padding: 8px 4px;
+  padding: 10px 6px;
   text-align: center;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .scanner-table td {
-  padding: 8px 4px;
+  padding: 9px 6px;
   text-align: center;
   border-bottom: 1px solid rgba(30, 39, 48, 0.5);
   color: var(--text);
-  transition: background 0.15s;
+  transition: background 0.2s ease;
 }
 
 .scanner-table tbody tr {
-  transition: background 0.15s;
+  transition: background 0.2s ease;
 }
 
 .scanner-table tbody tr:hover {
-  background: rgba(0, 217, 163, 0.03);
+  background: rgba(240, 185, 11, 0.03);
 }
 
+/* Gold best-row — winner highlight, not a buy signal */
 .scanner-row-best {
-  background: rgba(0, 217, 163, 0.05) !important;
+  background: rgba(240, 185, 11, 0.06) !important;
   border-left: 3px solid var(--accent);
 }
 
 .scanner-row-best td {
-  border-bottom-color: rgba(0, 217, 163, 0.15);
+  border-bottom-color: rgba(240, 185, 11, 0.12);
 }
 
 .scanner-rank {
@@ -856,12 +913,28 @@ select:disabled {
 
 /* Stop button variant */
 .btn-start.btn-stop {
-  background: var(--danger);
-  color: #fff;
+  background: rgba(246, 70, 93, 0.12);
+  border: 1px solid rgba(246, 70, 93, 0.6);
+  color: #f6465d;
+  animation: scanner-stop-pulse 2s ease-in-out infinite;
 }
 
-.btn-start.btn-stop:hover {
-  background: #ff6b63;
+@keyframes scanner-stop-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(246, 70, 93, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 10px 2px rgba(246, 70, 93, 0.15);
+  }
+}
+
+.btn-start.btn-stop:hover:not(:disabled) {
+  background: rgba(246, 70, 93, 0.2);
+  border-color: #f6465d;
+  box-shadow: 0 4px 16px rgba(246, 70, 93, 0.25);
 }
 
 /* ── Scrollbar styling ───────────────────────────────── */
@@ -4456,25 +4529,54 @@ body.light-theme .pt-btn-apply.active {
 
 /* ── Trader Sign In styles ────────────────────────────── */
 .trader-signin-container {
-  background-image: radial-gradient(rgba(240, 185, 11, 0.03) 1.5px, transparent 0);
-  background-size: 20px 20px;
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 0%, rgba(240, 185, 11, 0.06) 0%, transparent 60%), var(--bg);
+}
+
+/* Animated grid pattern behind the card */
+.trader-signin-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(240, 185, 11, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 185, 11, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: grid-drift 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes grid-drift {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 40px 40px;
+  }
 }
 
 .trader-card {
-  background: linear-gradient(160deg, var(--bg2) 0%, var(--bg) 100%);
-  border: 1px solid rgba(240, 185, 11, 0.12);
-  border-radius: 12px;
+  background: rgba(20, 21, 26, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(240, 185, 11, 0.18);
+  border-radius: 14px;
   width: 100%;
   max-width: 420px;
   padding: 32px 28px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   position: relative;
   transition: border-color 0.3s, box-shadow 0.3s;
+  z-index: 1;
 }
 
 .trader-card::before {
@@ -4484,13 +4586,13 @@ body.light-theme .pt-btn-apply.active {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, var(--accent, #f0b90b), transparent);
-  border-radius: 12px 12px 0 0;
+  background: linear-gradient(90deg, transparent, var(--accent, #f0b90b) 40%, rgba(240, 185, 11, 0.4) 60%, transparent);
+  border-radius: 14px 14px 0 0;
 }
 
 .trader-card:hover {
-  border-color: rgba(240, 185, 11, 0.22);
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4), 0 0 50px rgba(240, 185, 11, 0.04);
+  border-color: rgba(240, 185, 11, 0.3);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(240, 185, 11, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .brand-header {
@@ -4524,28 +4626,48 @@ body.light-theme .pt-btn-apply.active {
 .gateway-status {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-size: 10px;
   color: #0ecb81;
   background: rgba(14, 203, 129, 0.08);
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-family: monospace;
-  border: 1px solid rgba(14, 203, 129, 0.15);
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(14, 203, 129, 0.2);
+  font-weight: 700;
 }
 
+/* Sonar ping effect for gateway status */
 .status-dot {
-  width: 6px;
-  height: 6px;
+  position: relative;
+  width: 7px;
+  height: 7px;
   background: #0ecb81;
   border-radius: 50%;
-  animation: status-blink 1.5s infinite;
   box-shadow: 0 0 6px #0ecb81;
+  flex-shrink: 0;
 }
 
-@keyframes status-blink {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
+.status-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(14, 203, 129, 0.5);
+  animation: sonar-ping 2s ease-out infinite;
+}
+
+@keyframes sonar-ping {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 .trader-title {
@@ -4614,34 +4736,68 @@ body.light-theme .pt-btn-apply.active {
   background: var(--accent, #f0b90b);
   color: #000;
   border: none;
-  font-weight: 600;
-  border-radius: 6px;
-  padding: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 13px;
   font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer sweep during loading */
+.btn-trade::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  animation: btn-shimmer 1.4s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Only show shimmer when button is in loading state (via .loading class) */
+.btn-trade.loading::after {
+  opacity: 1;
+}
+
+@keyframes btn-shimmer {
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 150%;
+  }
 }
 
 .btn-trade:hover:not(:disabled) {
-  background: #f8c21a;
-  box-shadow: 0 4px 12px rgba(240, 185, 11, 0.25);
+  background: #fcd535;
+  box-shadow: 0 6px 20px rgba(240, 185, 11, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-trade:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.97);
+  box-shadow: none;
 }
 
 .btn-trade:disabled {
   background: var(--border);
   color: var(--text-dim);
   cursor: not-allowed;
+  transform: none;
 }
 
 .otp-splits-wrapper {
@@ -4653,27 +4809,38 @@ body.light-theme .pt-btn-apply.active {
 
 .otp-split-input {
   width: 48px;
-  height: 52px;
+  height: 56px;
   background: var(--bg);
-  border: 1px solid var(--border, #2b2f36);
-  border-radius: 6px;
+  border: 1.5px solid var(--border, #2b2f36);
+  border-radius: 8px;
   color: var(--text, #eaecef);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
+  font-family: 'Inter', monospace;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  letter-spacing: 0;
 }
 
 .otp-split-input:focus {
   outline: none;
   border-color: var(--accent, #f0b90b);
-  box-shadow: 0 0 8px rgba(240, 185, 11, 0.2);
-  background: var(--bg3);
+  box-shadow: 0 0 0 3px rgba(240, 185, 11, 0.15), 0 0 12px rgba(240, 185, 11, 0.1);
+  background: rgba(240, 185, 11, 0.04);
+  transform: scale(1.05);
+}
+
+/* Green full-OTP glow is triggered via JS className — applied to all boxes when all 6 are filled */
+.otp-split-input.otp-filled {
+  border-color: rgba(14, 203, 129, 0.6);
+  box-shadow: 0 0 0 2px rgba(14, 203, 129, 0.15);
+  background: rgba(14, 203, 129, 0.04);
 }
 
 .otp-split-input.input-error {
   border-color: var(--danger) !important;
-  box-shadow: 0 0 8px rgba(246, 70, 93, 0.2) !important;
+  box-shadow: 0 0 8px rgba(246, 70, 93, 0.25) !important;
+  transform: scale(1);
 }
 
 .trader-error {
@@ -4703,8 +4870,12 @@ body.light-theme .pt-btn-apply.active {
   color: #848e9c;
   text-align: center;
   margin-top: 24px;
-  opacity: 0.5;
-  letter-spacing: 0.2px;
+  opacity: 0.35;
+  letter-spacing: 0.8px;
+  line-height: 1.8;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 16px;
 }
 
 .resend-btn {
@@ -4715,6 +4886,7 @@ body.light-theme .pt-btn-apply.active {
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
+  text-underline-offset: 2px;
   transition: opacity 0.2s;
 }
 
@@ -4725,18 +4897,162 @@ body.light-theme .pt-btn-apply.active {
 .resend-text {
   font-size: 11.5px;
   color: var(--text-dim, #848e9c);
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .trade-loader {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(0,0,0,0.15);
+  border: 2px solid rgba(0, 0, 0, 0.2);
   border-top-color: #000;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TRADING UI ENHANCEMENTS — v2
+   Applied on top of existing rules for richer trading feel
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Scanner Config Title (Control panel labels) ─── */
+.scanner-config-title {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.8px !important;
+  text-transform: uppercase;
+  color: var(--text-dim) !important;
+}
+
+/* ── Filter toggle button — more visible ─────────── */
+.scanner-filters-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg3) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease !important;
+}
+
+.scanner-filters-toggle-btn:hover {
+  background: rgba(240, 185, 11, 0.08) !important;
+  border-color: rgba(240, 185, 11, 0.4) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Scanner config bar inputs — focus ring ──────── */
+.scanner-config-bar input:focus,
+.scanner-config-bar select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.15) !important;
+}
+
+/* ── ATM column top band ─────────────────────────── */
+/* Applied via inline styles in ResultTable — these reinforce the spec */
+.scanner-table th:nth-child(6),
+.scanner-table th:nth-child(7),
+.scanner-table th:nth-child(8) {
+  border-top: 2px solid rgba(240, 185, 11, 0.35);
+}
+
+/* ── Scanner match badge animate-in ─────────────── */
+.scanner-match-badge {
+  animation: badge-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes badge-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── Micro-interactions: all interactive buttons ── */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ── Charts sidebar card top-border by type ──────── */
+.sidebar .card:has(.toggle-btn.active.call) {
+  border-top: 2px solid var(--call);
+}
+
+.sidebar .card:has(.toggle-btn.active.put) {
+  border-top: 2px solid var(--put);
+}
+
+.sidebar .card:has(.toggle-btn.active.comb) {
+  border-top: 2px solid var(--comb);
+}
+
+/* ── Empty state radar animation ─────────────────── */
+.scanner-empty {
+  position: relative;
+}
+
+.scanner-empty-icon svg {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* Radar sweep for scanning state */
+.scanner-empty:has(+ div) .scanner-empty-icon,
+.scanner-empty .spinner~.scanner-empty-icon {
+  filter: drop-shadow(0 0 8px rgba(240, 185, 11, 0.25));
+}
+
+/* ── Light theme adjustments ─────────────────────── */
+body.light-theme .navbar {
+  box-shadow: 0 1px 0 rgba(240, 185, 11, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+body.light-theme .ws-badge:has(.ws-dot.live),
+body.light-theme .ws-badge:has(.ws-dot.online) {
+  background: rgba(14, 203, 129, 0.1);
+  border-color: rgba(14, 203, 129, 0.3);
+}
+
+body.light-theme .trader-signin-container {
+  background: radial-gradient(ellipse at 50% 0%, rgba(240, 185, 11, 0.08) 0%, transparent 60%), var(--bg);
+}
+
+body.light-theme .trader-signin-container::before {
+  background-image:
+    linear-gradient(rgba(240, 185, 11, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 185, 11, 0.06) 1px, transparent 1px);
+}
+
+body.light-theme .trader-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+body.light-theme .scanner-row-best {
+  background: rgba(240, 185, 11, 0.05) !important;
+}
+
+body.light-theme .logo {
+  text-shadow: none;
 }
