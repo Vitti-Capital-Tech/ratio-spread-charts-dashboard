@@ -149,7 +149,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
   const broadcastScannerTopSpreads = useCallback((payload) => {
     try {
-      const ch = new BroadcastChannel('option-scope-sync');
+      const ch = new BroadcastChannel('crypto-scanner-sync');
       ch.postMessage({ type: 'SCANNER_TOP_SPREADS_SYNC', payload, senderId: 'scanner', timestamp: Date.now() });
       ch.close();
     } catch (e) { }

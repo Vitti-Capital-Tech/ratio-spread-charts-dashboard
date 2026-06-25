@@ -41,7 +41,7 @@ export default function Navbar({
       <nav className="navbar">
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <CandlestickChart size={20} color="var(--accent)" style={{ flexShrink: 0 }} />
-          <span className="logo-text">VITTI OPTION<span>SCOPE</span></span>
+          <span className="logo-text">VITTI CRYPTO <span>SCANNER</span></span>
         </div>
 
         <div className="nav-tabs-container">

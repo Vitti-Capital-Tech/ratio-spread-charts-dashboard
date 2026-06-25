@@ -53,7 +53,7 @@ $$\text{Combined High} \neq \text{Call High} + \text{Put High}$$
 
 Because the Call option might hit its peak price at 10:05 AM and the Put option might hit its peak at 10:14 AM, their combined price at any single instant is almost never equal to the sum of their individual highs. Summing historical highs directly from REST API candles results in an artificial, distorted price expansion.
 
-To solve this, OptionScope uses a **dual-feed synchronization mechanism**:
+To solve this, Crypto Scanner uses a **dual-feed synchronization mechanism**:
 1. **Real-time WS Ticker ticks** evaluate the exact sum at every incoming tick, maintaining a mathematically precise combined candle.
 2. **Closed Candle Correction Scheduler** replaces the closed candles with official REST data after a settle delay.
 
@@ -89,7 +89,7 @@ Because WebSocket feeds can experience packet drop or local network latency, clo
 
 ## Price Alerting Engine
 
-OptionScope features a price alerting engine that allows users to place horizontal trigger boundaries on any active chart.
+Crypto Scanner features a price alerting engine that allows users to place horizontal trigger boundaries on any active chart.
 
 ### Audio Synthesis via Web Audio API
 

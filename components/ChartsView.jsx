@@ -1347,7 +1347,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                   const title = formatCombinedTitle(cSym, pSym, pType);
                   const msg = `${title} confirmed crossing at close! Price: ${closedComb.close.toFixed(2)} (${alertObj.dir} ${target})`;
                   if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('OptionScope Alert', { body: msg });
+                    new Notification('Crypto Scanner Alert', { body: msg });
                   }
                   addToast(msg);
 
@@ -2045,7 +2045,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             }}>
               {phase === 'loading' && <div className="spinner" />}
               <div style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>
-                {phase === 'loading' ? 'LOADING CANDLES' : 'OPTIONSCOPE'}
+                {phase === 'loading' ? 'LOADING CANDLES' : 'CRYPTO SCANNER'}
               </div>
               <div style={{ fontSize: 12, color: '#7d8590', textAlign: "center" }}>
                 {phase === 'loading' ? 'Loading chart data...' : 'Add a strategy to your watchlist and select it to view the chart.'}

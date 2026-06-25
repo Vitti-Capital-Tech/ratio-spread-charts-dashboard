@@ -187,7 +187,7 @@ export default function CustomSignIn() {
         <div className="brand-header">
           <div className="brand-logo-wrap">
             <CandlestickChart size={20} color="var(--accent)" style={{ flexShrink: 0 }} />
-            <span className="brand-logo-text">VITTI OPTION<span>SCOPE</span></span>
+            <span className="brand-logo-text">VITTI CRYPTO <span>SCANNER</span></span>
           </div>
           <div className="gateway-status">
             <span className="status-dot"></span>
