@@ -108,7 +108,7 @@ export default function CustomSignIn() {
       window.location.href = '/charts';
     } catch (err) {
       console.error('Verify error:', err);
-      setError(err.message || 'Invalid or expired verification code.');
+      setError(err.message || 'Invalid or expired code.');
     } finally {
       setLoading(false);
     }
@@ -191,18 +191,18 @@ export default function CustomSignIn() {
           </div>
           <div className="gateway-status">
             <span className="status-dot"></span>
-            <span>GATEWAY ONLINE</span>
+            <span>SYSTEM ONLINE</span>
           </div>
         </div>
 
         {/* Title */}
         <h2 className="trader-title">
-          {step === 'identifier' ? 'Secure Gateway' : 'Security Token Required'}
+          {step === 'identifier' ? 'Sign In' : 'Enter Verification Code'}
         </h2>
         <p className="trader-subtitle">
           {step === 'identifier'
-            ? 'Sign in to access your option spread scanner'
-            : `Enter the 6-digit one-time token sent to ${email}`}
+            ? 'Sign in to access your dashboard'
+            : `Enter the 6-digit code sent to ${email}`}
         </p>
 
         {/* System Error Message (like API failure) */}
@@ -217,7 +217,7 @@ export default function CustomSignIn() {
         {step === 'identifier' ? (
           <form onSubmit={handleSubmit(handleIdentifierSubmit)}>
             <div className="trader-label">
-              <span>Trader Email</span>
+              <span>Email Address</span>
             </div>
             <div className="trader-input-container" style={{ marginBottom: errors.email ? '14px' : '20px' }}>
               <span className="trader-input-icon">
@@ -241,7 +241,7 @@ export default function CustomSignIn() {
               <span className="field-error-text" style={{ marginTop: '-12px', marginBottom: '16px' }}>{errors.email.message}</span>
             )}
             <button type="submit" className="btn-trade" disabled={loading}>
-              {loading ? <span className="trade-loader"></span> : 'Request Secure Link / Token'}
+              {loading ? <span className="trade-loader"></span> : 'Send Verification Code'}
             </button>
 
           </form>
@@ -249,7 +249,7 @@ export default function CustomSignIn() {
           /* Step 2: Verification Input */
           <form onSubmit={handleSubmit(handleVerificationSubmit)}>
             <div className="trader-label">
-              <span>Security Token</span>
+              <span>Verification Code</span>
               <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>6 Digits</span>
             </div>
 
@@ -257,9 +257,9 @@ export default function CustomSignIn() {
             <input
               type="hidden"
               {...register('otp', {
-                required: 'Verification token is required',
-                minLength: { value: 6, message: 'Verification token must be 6 digits' },
-                maxLength: { value: 6, message: 'Verification token must be 6 digits' }
+                required: 'Verification code is required',
+                minLength: { value: 6, message: 'Code must be exactly 6 digits' },
+                maxLength: { value: 6, message: 'Code must be exactly 6 digits' }
               })}
             />
 
@@ -287,7 +287,7 @@ export default function CustomSignIn() {
             )}
 
             <button type="submit" className="btn-trade" disabled={loading || code.length !== 6}>
-              {loading ? <span className="trade-loader"></span> : 'Authenticate'}
+              {loading ? <span className="trade-loader"></span> : 'Verify & Sign In'}
             </button>
 
             {/* Resend Actions */}
