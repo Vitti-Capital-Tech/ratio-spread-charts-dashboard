@@ -26,6 +26,10 @@ flowchart TD
             Charts["Interactive Options Charting"]
         end
         
+        subgraph Security Layer
+            Auth["Better Auth + Resend (OTP)"]
+        end
+        
         subgraph Cross-Tab Sync
             Broadcast["BroadcastChannel (useTabSync)"]
         end
@@ -54,8 +58,12 @@ While built on Next.js (App Router), the core functionality heavily relies on cl
 - **REST API:** Used to fetch product listings (strikes, expiries), historical candle data (for chart initialization and closed-candle correction), and a one-time snapshot of the order book on startup. To bypass CORS restrictions, requests are routed through a Next.js rewrite proxy (`next.config.mjs`) to `https://api.india.delta.exchange`.
 - **WebSocket Feed:** A direct wss connection establishes a live stream for `v2/ticker`, `trades`, `mark_price`, and `l2_updates`. This ensures millisecond-level accuracy for the pricing engines without polling overhead.
 
-### 2.3 State Synchronization (BroadcastChannel)
-Since a trader might have the Scanner open on one monitor and the Charts open on another, the app uses the `BroadcastChannel` API (`option-scope-sync`). When the Scanner finds top tier ratio spreads, it broadcasts them locally. The Charts module listens to this channel and automatically displays these top picks in its sidebar watchlist, creating a cohesive multi-window workspace.
+### 2.3 Authentication and Multi-User Isolation
+- **Authentication:** The dashboard uses Better Auth integrated with Resend for a secure, passwordless Email OTP flow.
+- **Client Isolation:** To support multiple users logging in on the same browser/device without data leakage, all local configurations (themes, active strikes, selected watchlists) are saved to `localStorage` using dynamic namespaces tied to the active session's `user.id` (e.g., `user123_vitti_charts_watchlist`).
+
+### 2.4 State Synchronization (BroadcastChannel)
+Since a trader might have the Scanner open on one monitor and the Charts open on another, the app uses the `BroadcastChannel` API (`crypto-scanner-sync`). When the Scanner finds top tier ratio spreads, it broadcasts them locally. The Charts module listens to this channel and automatically displays these top picks in its sidebar watchlist, creating a cohesive multi-window workspace.
 
 ## 3. Data Flow
 

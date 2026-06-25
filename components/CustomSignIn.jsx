@@ -243,41 +243,7 @@ export default function CustomSignIn() {
             <button type="submit" className="btn-trade" disabled={loading}>
               {loading ? <span className="trade-loader"></span> : 'Request Secure Link / Token'}
             </button>
-            <button
-              type="button"
-              className="btn-trade"
-              style={{ marginTop: '10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)' }}
-              disabled={loading}
-              onClick={async () => {
-                const targetEmail = getValues('email')?.trim();
-                if (!targetEmail) {
-                  setError('Please enter your email first.');
-                  return;
-                }
-                setError('');
-                setLoading(true);
-                try {
-                  const res = await fetch('/api/auth/bypass', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: targetEmail })
-                  });
-                  const data = await res.json();
-                  if (data.error) throw new Error(data.error);
-                  
-                  // Force authClient to refresh its session cache
-                  await authClient.getSession();
 
-                  window.location.href = '/charts';
-                } catch (err) {
-                  setError(err.message || 'Bypass failed.');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-            >
-              Bypass OTP (Direct Sign In)
-            </button>
           </form>
         ) : (
           /* Step 2: Verification Input */

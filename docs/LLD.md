@@ -8,16 +8,21 @@ This document dives into the internal mechanics, state management, and component
 /app
   /charts/page.js         # Entry point for the charts view
   /ratio-spread/page.js   # Entry point for the scanner view
+  /sign-in/page.js        # Entry point for the secure gateway (OTP login)
+  /api/auth/[...all]      # Better Auth dynamic API route handler
   layout.js               # Global Next.js layout
   globals.css             # Unified CSS tokens and styles
 /components
   ChartsView.jsx          # Main orchestrator for charting
   RatioSpreadScanner.jsx  # Main orchestrator for the scanner engine
   ResultTable.jsx         # Presentation table for scanner results
-  Navbar.jsx              # Navigation and theme toggle
+  CustomSignIn.jsx        # Custom OTP login UI component
+  Navbar.jsx              # Navigation, theme toggle, and session management
   /common                 # Reusable UI primitives (CustomInput, CustomSelect)
 /lib
   api.js                  # Axios/Fetch wrappers and WebSocket factory
+  auth.js                 # Better Auth server configuration
+  auth-client.js          # Better Auth client hooks and providers
   scannerUtils.js         # Math helpers (IV normalization, finite checks)
   useTabSync.js           # Custom React hook for BroadcastChannel integration
 ```
