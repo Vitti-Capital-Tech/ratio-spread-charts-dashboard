@@ -14,7 +14,7 @@ import CustomSelect from './common/CustomSelect';
 import CustomInput from './common/CustomInput';
 
 // ── Main Scanner Component ──────────────────────────────────────────────────
-export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, setNavbarProps }) {
+export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, setNavbarProps, userKey }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [underlying, setUnderlying] = useState('BTC');
   const [products, setProducts] = useState([]);
@@ -25,13 +25,15 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
   // Mount effect: Load from localStorage
   useEffect(() => {
-    const savedUnderlying = localStorage.getItem('vitti_scanner_underlying');
-    if (savedUnderlying) setUnderlying(savedUnderlying);
-
-    const savedExpiry = localStorage.getItem('vitti_scanner_expiry');
-    if (savedExpiry) setSelExpiry(savedExpiry);
-
-    const savedScanning = localStorage.getItem('vitti_scanner_scanning') === 'true';
+    const savedUnderlying = localStorage.getItem(`${userKey}_vitti_scanner_underlying`);
+    if (savedUnderlying && UNDERLYINGS.includes(savedUnderlying)) {
+      setUnderlying(savedUnderlying);
+    }
+    const savedExpiry = localStorage.getItem(`${userKey}_vitti_scanner_expiry`);
+    if (savedExpiry) {
+      setSelExpiry(savedExpiry);
+    }
+    const savedScanning = localStorage.getItem(`${userKey}_vitti_scanner_scanning`) === 'true';
     if (savedScanning) setScanning(savedScanning);
 
     setIsLoaded(true);
@@ -40,21 +42,21 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
   // Save effects: Run only when isLoaded is true
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('vitti_scanner_underlying', underlying);
+      localStorage.setItem(`${userKey}_vitti_scanner_underlying`, underlying);
     }
-  }, [underlying, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded && selExpiry) {
-      localStorage.setItem('vitti_scanner_expiry', selExpiry);
-    }
-  }, [selExpiry, isLoaded]);
+  }, [underlying, isLoaded, userKey]);
 
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('vitti_scanner_scanning', String(scanning));
+      localStorage.setItem(`${userKey}_vitti_scanner_expiry`, selExpiry);
     }
-  }, [scanning, isLoaded]);
+  }, [selExpiry, isLoaded, userKey]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(`${userKey}_vitti_scanner_scanning`, String(scanning));
+    }
+  }, [scanning, isLoaded, userKey]);
 
   const [resultsCall, setResultsCall] = useState([]);
   const [resultsPut, setResultsPut] = useState([]);
@@ -89,7 +91,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
   // Configurable thresholds initialized from localStorage
   const [config, setConfig] = useState(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('vitti_algo_config') : null;
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(`${userKey}_vitti_algo_config`) : null;
     const base = {
       minStrikeDiff: 800,
       minIvDiff: 5,
@@ -175,7 +177,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
         sellQty: s.sellQty
       }))
     };
-    localStorage.setItem(SCANNER_TOP_KEY, JSON.stringify(payload));
+    localStorage.setItem(`${userKey}_${SCANNER_TOP_KEY}`, JSON.stringify(payload));
     broadcastScannerTopSpreads(payload);
   }, [underlying, selExpiry, broadcastScannerTopSpreads, pickTopUniqueStrikes]);
 
@@ -580,7 +582,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
     setScanning(false);
     setExpectedTickerCount(0);
     const payload = { underlying, expiry: selExpiry, timestamp: Date.now(), callTop3: [], putTop3: [] };
-    localStorage.setItem(SCANNER_TOP_KEY, JSON.stringify(payload));
+    localStorage.setItem(`${userKey}_${SCANNER_TOP_KEY}`, JSON.stringify(payload));
     broadcastScannerTopSpreads(payload);
   }, [underlying, selExpiry, broadcastScannerTopSpreads]);
 
@@ -589,7 +591,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       const updates = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: value };
       const newConfig = { ...c, ...updates };
       try {
-        localStorage.setItem('vitti_algo_config', JSON.stringify(newConfig));
+        localStorage.setItem(`${userKey}_vitti_algo_config`, JSON.stringify(newConfig));
       } catch (err) {
         console.error('Failed to save config to localStorage:', err);
       }

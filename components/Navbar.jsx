@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
@@ -19,6 +19,7 @@ export default function Navbar({
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   const activeTab = activeTabOverride || (pathname.includes('/ratio-spread') ? 'scanner' : 'charts');
 
@@ -30,8 +31,9 @@ export default function Navbar({
   };
 
   const handleSignOut = async () => {
+    setShowSignOutModal(false);
     await authClient.signOut();
-    router.push('/');
+    window.location.href = '/';
   };
 
   return (
@@ -87,7 +89,7 @@ export default function Navbar({
                 {user.email}
               </span>
               <button
-                onClick={handleSignOut}
+                onClick={() => setShowSignOutModal(true)}
                 className="nav-tab"
                 style={{ padding: '6px 14px', background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)' }}
               >
@@ -127,6 +129,53 @@ export default function Navbar({
           <span className="mobile-bottom-text">Ratio Spread</span>
         </Link>
       </div>
+
+      {/* Sign Out Confirmation Modal */}
+      {showSignOutModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
+            padding: '24px',
+            borderRadius: '12px',
+            width: '320px',
+            textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+          }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', color: 'var(--text)', fontWeight: 600 }}>Confirm Sign Out</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: 'var(--text-dim)' }}>
+              Are you sure you want to sign out of your account?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowSignOutModal(false)}
+                style={{ flex: 1, padding: '10px 0', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text)', cursor: 'pointer', fontWeight: 500, transition: 'background 0.2s' }}
+                onMouseOver={(e) => e.target.style.background = 'var(--hover-bg)'}
+                onMouseOut={(e) => e.target.style.background = 'var(--bg2)'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSignOut}
+                style={{ flex: 1, padding: '10px 0', background: 'var(--danger-color, #e02424)', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontWeight: 500, transition: 'opacity 0.2s' }}
+                onMouseOver={(e) => e.target.style.opacity = '0.9'}
+                onMouseOut={(e) => e.target.style.opacity = '1'}
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -102,7 +102,10 @@ export default function CustomSignIn() {
         throw error;
       }
 
-      router.push('/charts');
+      // Force authClient to refresh its session cache
+      await authClient.getSession();
+
+      window.location.href = '/charts';
     } catch (err) {
       console.error('Verify error:', err);
       setError(err.message || 'Invalid or expired verification code.');
@@ -265,7 +268,7 @@ export default function CustomSignIn() {
                   // Force authClient to refresh its session cache
                   await authClient.getSession();
 
-                  router.push('/charts');
+                  window.location.href = '/charts';
                 } catch (err) {
                   setError(err.message || 'Bypass failed.');
                 } finally {

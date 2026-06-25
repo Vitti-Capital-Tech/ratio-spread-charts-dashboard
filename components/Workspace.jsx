@@ -4,6 +4,7 @@ import ChartsView from './ChartsView';
 import RatioSpreadScanner from './RatioSpreadScanner';
 import Navbar from './Navbar';
 import { useTabSync } from '../lib/useTabSync';
+import { authClient } from '../lib/auth-client';
 
 export default function Workspace({ defaultTab }) {
   const [activeTab, setActiveTab] = useState(defaultTab || 'charts');
@@ -47,6 +48,8 @@ export default function Workspace({ defaultTab }) {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  const { data: session, isPending } = authClient.useSession();
+
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
     const newPath = newTab === 'charts' ? '/charts' : '/ratio-spread';
@@ -55,6 +58,11 @@ export default function Workspace({ defaultTab }) {
     }
   };
 
+  if (isPending) {
+    return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}>Loading workspace...</div>;
+  }
+
+  const userKey = session?.user?.id || 'anonymous';
   const activeNavbarProps = activeTab === 'charts' ? chartsNavbarProps : scannerNavbarProps;
 
   return (
@@ -80,6 +88,7 @@ export default function Workspace({ defaultTab }) {
             theme={theme}
             toggleTheme={toggleTheme}
             setNavbarProps={setChartsNavbarProps}
+            userKey={userKey}
           />
         </div>
         <div style={{ display: activeTab === 'scanner' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0 }}>
@@ -87,6 +96,7 @@ export default function Workspace({ defaultTab }) {
             theme={theme}
             toggleTheme={toggleTheme}
             setNavbarProps={setScannerNavbarProps}
+            userKey={userKey}
           />
         </div>
       </div>

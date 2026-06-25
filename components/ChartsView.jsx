@@ -670,7 +670,7 @@ const ChartPanel = forwardRef(function ChartPanel({
 });
 
 // ── App ───────────────────────────────────────────────────────────────────────
-export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarProps }) {
+export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarProps, userKey }) {
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
   useEffect(() => { setIsConfigCollapsed(window.innerWidth <= 900); }, []);
   
@@ -697,65 +697,65 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
   // Mount effect: Load from localStorage
   useEffect(() => {
-    const savedUnderlying = localStorage.getItem('vitti_charts_underlying');
+    const savedUnderlying = localStorage.getItem(`${userKey}_vitti_charts_underlying`);
     if (savedUnderlying) setUnderlying(savedUnderlying);
 
-    const savedTf = localStorage.getItem('vitti_charts_tf');
+    const savedTf = localStorage.getItem(`${userKey}_vitti_charts_tf`);
     if (savedTf) setTf(savedTf);
 
-    const savedPriceType = localStorage.getItem('vitti_charts_price_type');
+    const savedPriceType = localStorage.getItem(`${userKey}_vitti_charts_price_type`);
     if (savedPriceType) setPriceType(savedPriceType);
 
-    const savedLegType = localStorage.getItem('vitti_charts_leg_type');
+    const savedLegType = localStorage.getItem(`${userKey}_vitti_charts_leg_type`);
     if (savedLegType) setLegType(savedLegType);
 
-    const savedWatchlist = localStorage.getItem('vitti_charts_watchlist');
+    const savedWatchlist = localStorage.getItem(`${userKey}_vitti_charts_watchlist`);
     if (savedWatchlist) {
       try {
         setWatchList(JSON.parse(savedWatchlist));
       } catch (e) {}
     }
 
-    const savedSelectedWatchId = localStorage.getItem('vitti_charts_selected_watch_id');
+    const savedSelectedWatchId = localStorage.getItem(`${userKey}_vitti_charts_selected_watch_id`);
     if (savedSelectedWatchId) setSelectedWatchId(savedSelectedWatchId);
 
     setIsLoaded(true);
-  }, []);
+  }, [userKey]);
 
   // Save effects: Run only when isLoaded is true
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('vitti_charts_underlying', underlying);
+      localStorage.setItem(`${userKey}_vitti_charts_underlying`, underlying);
     }
-  }, [underlying, isLoaded]);
+  }, [underlying, isLoaded, userKey]);
 
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('vitti_charts_tf', tf);
+      localStorage.setItem(`${userKey}_vitti_charts_tf`, tf);
     }
-  }, [tf, isLoaded]);
+  }, [tf, isLoaded, userKey]);
 
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('vitti_charts_price_type', priceType);
+      localStorage.setItem(`${userKey}_vitti_charts_price_type`, priceType);
     }
-  }, [priceType, isLoaded]);
+  }, [priceType, isLoaded, userKey]);
 
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('vitti_charts_leg_type', legType);
+      localStorage.setItem(`${userKey}_vitti_charts_leg_type`, legType);
     }
-  }, [legType, isLoaded]);
+  }, [legType, isLoaded, userKey]);
 
   useEffect(() => {
     if (isLoaded) {
       if (selectedWatchId) {
-        localStorage.setItem('vitti_charts_selected_watch_id', selectedWatchId);
+        localStorage.setItem(`${userKey}_vitti_charts_selected_watch_id`, selectedWatchId);
       } else {
-        localStorage.removeItem('vitti_charts_selected_watch_id');
+        localStorage.removeItem(`${userKey}_vitti_charts_selected_watch_id`);
       }
     }
-  }, [selectedWatchId, isLoaded]);
+  }, [selectedWatchId, isLoaded, userKey]);
 
   // ── Cross-tab sync for Watchlist ─────────────────────────────────────────
   const isRemoteUpdateRef = useRef(false);
@@ -787,14 +787,14 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   useEffect(() => {
     watchListRef.current = watchList;
     if (isLoaded) {
-      localStorage.setItem('vitti_charts_watchlist', JSON.stringify(watchList));
+      localStorage.setItem(`${userKey}_vitti_charts_watchlist`, JSON.stringify(watchList));
     }
     if (isRemoteUpdateRef.current) {
       isRemoteUpdateRef.current = false;
       return;
     }
     tabBroadcast('WATCHLIST_SYNC', { watchList });
-  }, [watchList, tabBroadcast, isLoaded]);
+  }, [watchList, tabBroadcast, isLoaded, userKey]);
   // ─────────────────────────────────────────────────────────────────────────
 
   const addToWatchList = async () => {
