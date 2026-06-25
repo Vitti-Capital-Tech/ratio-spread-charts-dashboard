@@ -577,8 +577,8 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
       flushTimerRef.current = null;
     }
     tickerBufferRef.current = {};
-    latestTickerDataRef.current = {}; // Clean up refs
-    setTickerData({}); // Reset state ticker data to prevent stale display
+    // Intentionally keep latestTickerDataRef and tickerData so the frozen table rows 
+    // can still access the last known prices for ATM P&L and Margin calculations.
     setScanning(false);
     setExpectedTickerCount(0);
     const payload = { underlying, expiry: selExpiry, timestamp: Date.now(), callTop3: [], putTop3: [] };
@@ -636,9 +636,9 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
         {/* Topbar Configuration */}
         <div className="scanner-config-bar">
           <div className="scanner-config-main">
-            <span className="scanner-config-title">SCANNER CONFIG</span>
+            <span className="scanner-config-title">RATIO SPREAD ENGINE</span>
             <div className="form-group row-inline">
-              <label>Underlying:</label>
+              <label>Asset:</label>
               <CustomSelect
                 value={underlying}
                 onChange={val => { setUnderlying(val); stopScan(); }}
@@ -683,9 +683,9 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
           <div className="hide-mobile" style={{ width: 1, height: 24, backgroundColor: 'var(--border)' }}></div>
 
           <div className={`scanner-filters-container ${isFiltersCollapsed ? 'collapsed' : 'expanded'}`}>
-            <span className="scanner-config-title filter-title">FILTERS</span>
+            <span className="scanner-config-title filter-title">SCREEN FILTERS</span>
             <div className="form-group row-inline">
-              <label>Min Spread Width ($):</label>
+              <label>Min Wing Width ($):</label>
               <CustomInput
                 type="number"
                 value={config.minStrikeDiff}
@@ -694,7 +694,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               />
             </div>
             <div className="form-group row-inline">
-              <label>Min IV Edge (%):</label>
+              <label>Min IV Skew Edge (%):</label>
               <CustomInput
                 type="number"
                 value={config.minIvDiff}
@@ -703,7 +703,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               />
             </div>
             <div className="form-group row-inline">
-              <label>Max Delta Deviation:</label>
+              <label>Max Delta Skew:</label>
               <CustomInput
                 type="number"
                 step="0.01"
@@ -713,7 +713,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               />
             </div>
             <div className="form-group row-inline">
-              <label>Min Short Premium ($):</label>
+              <label>Min Short Leg Premium ($):</label>
               <CustomInput
                 type="number"
                 value={config.minSellPremium}
@@ -732,7 +732,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               />
             </div>
             <div className="form-group row-inline">
-              <label>Min Spot Distance ($):</label>
+              <label>Min OTM Distance ($):</label>
               <CustomInput
                 type="number"
                 value={config.minLongDist}
@@ -753,19 +753,19 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
             <div key="atmRatioScaling" className="form-group row-inline" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <input type="checkbox" id="atmRatioScaling" checked={config.atmRatioScaling ?? false}
                 onChange={e => updateConfig('atmRatioScaling', e.target.checked)} />
-              <label htmlFor="atmRatioScaling" style={{ cursor: 'pointer', userSelect: 'none' }}>Dynamic ATM Scaling</label>
+              <label htmlFor="atmRatioScaling" style={{ cursor: 'pointer', userSelect: 'none' }}>Dynamic ATM Ratio Scaling</label>
             </div>
             {config.atmRatioScaling && (
               <>
                 <div key="atmRatioPctCall" className="form-group row-inline">
-                  <label>Call Scaling (%):</label>
+                  <label>Call Side Scale (%):</label>
                   <CustomInput type="number" step="1" value={config.atmRatioPctCall ?? 50}
                     onChange={e => updateConfig('atmRatioPctCall', Number(e.target.value))}
                     style={{ width: 50 }}
                   />
                 </div>
                 <div key="atmRatioPctPut" className="form-group row-inline">
-                  <label>Put Scaling (%):</label>
+                  <label>Put Side Scale (%):</label>
                   <CustomInput type="number" step="1" value={config.atmRatioPctPut ?? 50}
                     onChange={e => updateConfig('atmRatioPctPut', Number(e.target.value))}
                     style={{ width: 50 }}
@@ -781,14 +781,14 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               onClick={scanning ? handleStopScan : handleStartScan}
               disabled={!selExpiry}
             >
-              {scanning ? '■ STOP SCAN' : '▶ START SCAN'}
+              {scanning ? '■  HALT SCAN' : '▶  LAUNCH SCAN'}
             </button>
           </div>
         </div>
 
         <div className="scanner-mobile-tabs">
-          <div className={`scanner-mobile-tab ${activeTableTab === 'call' ? 'active' : ''}`} onClick={() => setActiveTableTab('call')}>Call Spreads</div>
-          <div className={`scanner-mobile-tab ${activeTableTab === 'put' ? 'active' : ''}`} onClick={() => setActiveTableTab('put')}>Put Spreads</div>
+          <div className={`scanner-mobile-tab ${activeTableTab === 'call' ? 'active' : ''}`} onClick={() => setActiveTableTab('call')}>📈 Call Spreads</div>
+          <div className={`scanner-mobile-tab ${activeTableTab === 'put' ? 'active' : ''}`} onClick={() => setActiveTableTab('put')}>📉 Put Spreads</div>
         </div>
 
         <main className={`main scanner-main show-${activeTableTab}`} style={{ position: 'relative', padding: 12, gap: 12, display: 'flex', flexDirection: 'row', overflow: 'hidden', flex: 1 }}>

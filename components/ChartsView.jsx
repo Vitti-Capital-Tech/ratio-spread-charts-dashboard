@@ -1600,7 +1600,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
         <aside className="sidebar">
           <div className="card" style={{ padding: '12px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isConfigCollapsed ? 0 : '10px' }}>
-              <span className="card-title" style={{ margin: 0 }}>CONFIGURATION</span>
+              <span className="card-title" style={{ margin: 0 }}>INSTRUMENT SETUP</span>
               <button
                 className="scanner-filters-toggle-btn mobile-only-toggle"
                 onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
@@ -1625,7 +1625,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             <div className={`sidebar-collapsible ${isConfigCollapsed ? '' : 'expanded'}`} style={{ width: '100%', display: isConfigCollapsed ? 'none' : 'flex', flexDirection: 'column', gap: '12px', marginTop: isConfigCollapsed ? '0' : '12px' }}>
 
               <div className="form-group">
-                <label>Underlying</label>
+                <label>Asset</label>
                 <CustomSelect
                   value={underlying}
                   onChange={val => setUnderlying(val)}
@@ -1634,7 +1634,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
               </div>
 
               <div className="form-group">
-                <label>Expiry Date</label>
+                <label>Expiry</label>
                 <CustomSelect
                   value={selExpiry}
                   onChange={val => setSelExpiry(val)}
@@ -1664,32 +1664,32 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
               </div>
 
               <div className="form-group">
-                <label>Strategy Type</label>
+                <label>Leg Structure</label>
                 <CustomSelect
                   value={legType}
                   onChange={val => setLegType(val)}
                   options={[
-                    { label: 'Combined (Straddle/Strangle)', value: 'combined' },
-                    { label: 'Single Leg (Call)', value: 'call' },
-                    { label: 'Single Leg (Put)', value: 'put' }
+                    { label: 'Straddle / Strangle (C+P)', value: 'combined' },
+                    { label: 'Call Leg Only', value: 'call' },
+                    { label: 'Put Leg Only', value: 'put' }
                   ]}
                 />
               </div>
 
               <div className="form-group">
-                <label>Pricing Reference</label>
+                <label>Price Feed</label>
                 <CustomSelect
                   value={priceType}
                   onChange={val => setPriceType(val)}
                   options={[
-                    { label: 'Mark Price', value: 'mark' },
-                    { label: 'Last Traded Price (LTP)', value: 'ltp' }
+                    { label: 'Mark Price (Fair Value)', value: 'mark' },
+                    { label: 'LTP (Last Traded)', value: 'ltp' }
                   ]}
                 />
               </div>
 
               <div className="form-group">
-                <label>Timeframe</label>
+                <label>Candle Timeframe</label>
                 <CustomSelect
                   value={tf}
                   onChange={val => setTf(val)}
@@ -1700,23 +1700,23 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
           </div>
 
           <button className="btn-start" disabled={(!callSym && !putSym) || (legType !== 'put' && !callSym) || (legType !== 'call' && !putSym)} onClick={addToWatchList}>
-            TRACK STRATEGY
+            ADD TO WATCHLIST ＋
           </button>
 
           {errMsg && <div style={{ color: '#f85149', fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>{errMsg}</div>}
 
           <div className="card">
-            <div className="card-title">Live Prices ({priceType === 'mark' ? 'Mark' : 'LTP'})</div>
+            <div className="card-title">LIVE PREMIUMS ({priceType === 'mark' ? 'Mark' : 'LTP'})</div>
             <div className="stat-row">
-              <span className="stat-label">CALL</span>
+              <span className="stat-label">CALL Prem</span>
               <span className="stat-val call">{callPrice ? callPrice.toFixed(2) : '—'}</span>
             </div>
             <div className="stat-row">
-              <span className="stat-label">PUT</span>
+              <span className="stat-label">PUT Prem</span>
               <span className="stat-val put">{putPrice ? putPrice.toFixed(2) : '—'}</span>
             </div>
             <div className="stat-row">
-              <span className="stat-label">COMBINED</span>
+              <span className="stat-label">STRADDLE</span>
               <span className="stat-val comb">{combPrice}</span>
             </div>
           </div>
@@ -1724,11 +1724,11 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
           {/* Alert History card */}
           <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 250 }}>
             <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-              <span>Alert History</span>
-              <span onClick={() => setAlertLogs([])} style={{ fontSize: 9, cursor: 'pointer', opacity: 0.6 }}>Clear</span>
+              <span>SIGNAL LOG</span>
+              <span onClick={() => setAlertLogs([])} style={{ fontSize: 9, cursor: 'pointer', opacity: 0.6, letterSpacing: 1, textTransform: 'uppercase' }}>Clear All</span>
             </div>
             <div className="trade-list" style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
-              {!alertLogs.length && <div style={{ textAlign: 'center', padding: 20, color: '#484f58', fontSize: 11 }}>No alerts logged yet.</div>}
+              {!alertLogs.length && <div style={{ textAlign: 'center', padding: 20, color: '#484f58', fontSize: 11 }}>No signals fired yet. Set a price alert to get started.</div>}
               {alertLogs.map(log => (
                 <div key={log.id} style={{
                   padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 11,
@@ -1754,14 +1754,15 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
         {/* Chart area — charts ALWAYS mounted, overlay sits on top */}
         <main className="main" style={{ position: 'relative', padding: 12, gap: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-          <div style={{ fontFamily: 'JetBrains Mono', fontSize: 16, fontWeight: 700, color: theme === 'dark' ? '#e6edf3' : '#1e2730', display: 'flex', alignItems: 'center' }}>
-            SPOT: <span style={{ color: '#e3b341', marginLeft: 8 }}>{spotPrice ? spotPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
+          <div style={{ fontFamily: 'JetBrains Mono', fontSize: 16, fontWeight: 700, color: theme === 'dark' ? '#e6edf3' : '#1e2730', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Spot</span>
+            <span style={{ color: '#e3b341', marginLeft: 2 }}>{spotPrice ? spotPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
           </div>
 
           <div className="watchlist-container" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', overflowX: 'auto', paddingBottom: 8, minHeight: 80, maxHeight: '35vh', zIndex: 11 }}>
             {watchList.length === 0 ? (
               <div style={{ color: 'var(--text-dim)', fontSize: 12, padding: 12, border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center' }}>
-                No strategies in watchlist. Add one from the sidebar.
+                No positions tracked. Build a strategy from the sidebar and click ADD TO WATCHLIST.
               </div>
             ) : (
               watchList.map(item => {
@@ -2045,10 +2046,10 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             }}>
               {phase === 'loading' && <div className="spinner" />}
               <div style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>
-                {phase === 'loading' ? 'LOADING CANDLES' : 'CRYPTO SCANNER'}
+                {phase === 'loading' ? 'LOADING CANDLES…' : 'PREMIUM CHART TERMINAL'}
               </div>
               <div style={{ fontSize: 12, color: '#7d8590', textAlign: "center" }}>
-                {phase === 'loading' ? 'Loading chart data...' : 'Add a strategy to your watchlist and select it to view the chart.'}
+                {phase === 'loading' ? 'Fetching candle history from exchange…' : 'Build a strategy in the sidebar, add it to the watchlist, and select it to open the live chart.'}
               </div>
               {errMsg && <div style={{ color: '#f85149', fontSize: 12, maxWidth: 320, textAlign: 'center' }}>{errMsg}</div>}
             </div>

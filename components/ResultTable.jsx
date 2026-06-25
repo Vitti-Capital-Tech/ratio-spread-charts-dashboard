@@ -64,7 +64,7 @@ export default function ResultTable({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="scanner-pulse" data-active={scanning} />
           <span className="scanner-table-title">
-            {title} OPPORTUNITIES
+            {title} RATIO SPREADS
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -72,7 +72,7 @@ export default function ResultTable({
             <span className="scanner-match-badge">{results.length} match{results.length !== 1 ? 'es' : ''}</span>
           )}
           <div style={{ fontSize: 12 }}>
-            Spot Price: {spotPrice?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            Spot: <strong style={{ color: '#e3b341' }}>{spotPrice?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </div>
           {lastRefreshed > 0 && (
             <div className="hide-xs" style={{ fontSize: 12, color: 'var(--text)', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
@@ -107,9 +107,9 @@ export default function ResultTable({
                 <circle cx="12" cy="12" r="1.7" fill="currentColor" />
               </svg>
             </div>
-            <div className="scanner-empty-title">RATIO SPREAD SCANNER ({type})</div>
+            <div className="scanner-empty-title">NO SETUPS FOUND — {type} SIDE</div>
             <div className="scanner-empty-desc">
-              Configure filters and click START SCANNER to find optimal ratio spread opportunities in real-time.
+              Adjust your Greeks or strike filters to identify viable ratio spread opportunities.
             </div>
           </div>
         )}
@@ -122,8 +122,8 @@ export default function ResultTable({
             </div>
             <div className="scanner-empty-desc">
               {hasLiveFeed
-                ? `Live ticker data received. Current filters have not produced a ratio spread match yet.`
-                : `Waiting for live ticker data. Matches will appear here once quotes arrive.`}
+                ? `Feed active — tightening filters may surface spreads. Adjust wing width or IV skew threshold.`
+                : `Connecting to exchange WebSocket… Ratio spread setups will appear once quotes stream in.`}
             </div>
           </div>
         )}
@@ -132,14 +132,14 @@ export default function ResultTable({
           <table className="scanner-table">
             <thead>
               <tr>
-                <th>Spread Strikes</th>
-                <th>Premium (L/S)</th>
-                <th>Ratio (L/S)</th>
-                <th>Net Premium & IV Edge</th>
-                <th className="hide-mobile">Delta (L/S)</th>
-                <th style={{ borderLeft: '1px solid rgba(0, 217, 163, 0.2)', background: 'rgba(0, 217, 163, 0.04)', color: 'var(--accent)' }}>ATM Pricing</th>
-                <th style={{ background: 'rgba(0, 217, 163, 0.04)', color: 'var(--accent)' }}>ATM Edge (P&L)</th>
-                <th style={{ borderRight: '1px solid rgba(0, 217, 163, 0.2)', background: 'rgba(0, 217, 163, 0.04)', color: 'var(--accent)' }}>Req. Margin</th>
+                <th>Wings (L / S)</th>
+                <th>Leg Premiums</th>
+                <th>Sell Ratio</th>
+                <th>Net Debit · IV Edge</th>
+                <th className="hide-mobile">Net Δ (L / S)</th>
+                <th style={{ borderLeft: '1px solid rgba(240, 185, 11, 0.2)', background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>ATM Fair Value</th>
+                <th style={{ background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>ATM P&amp;L</th>
+                <th style={{ borderRight: '1px solid rgba(240, 185, 11, 0.2)', background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>Margin Req.</th>
               </tr>
             </thead>
             <tbody>
