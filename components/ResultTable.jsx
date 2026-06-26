@@ -288,7 +288,6 @@ export default function ResultTable({
                             ) : (
                               <span className="scanner-toggle-spacer" aria-hidden="true" />
                             )}
-                            <span className={`scanner-medal rank-${currentRank <= 3 ? currentRank : 'n'}`}>{currentRank}</span>
                             <div>
                               <div>
                                 <span className={`scanner-buy`}>

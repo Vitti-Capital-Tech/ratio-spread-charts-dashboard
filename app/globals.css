@@ -770,30 +770,6 @@ select:disabled {
   background: rgba(240, 185, 11, 0.06);
 }
 
-/* ── Rank medals ── */
-.scanner-medal {
-  width: 17px;
-  height: 17px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  display: inline-grid;
-  place-items: center;
-  font-family: 'Inter', sans-serif;
-  font-size: 9px;
-  font-weight: 700;
-  color: #15110a;
-}
-
-.scanner-medal.rank-1 { background: linear-gradient(150deg, #ffd95e, #f0b90b); }
-.scanner-medal.rank-2 { background: linear-gradient(150deg, #d8dde4, #9aa3ad); }
-.scanner-medal.rank-3 { background: linear-gradient(150deg, #e0975a, #b9702f); }
-
-.scanner-medal.rank-n {
-  background: var(--bg3);
-  color: var(--text-dim);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
 /* Keeps strike text aligned when a row has no expand toggle */
 .scanner-toggle-spacer {
   display: inline-block;
