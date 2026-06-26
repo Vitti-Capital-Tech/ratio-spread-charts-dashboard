@@ -63,8 +63,9 @@ export default function ResultTable({
       <div className="scanner-table-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className="scanner-pulse" data-active={scanning} />
+          <span className={`scanner-side-pill ${type === 'CALL' ? 'call' : 'put'}`}>{type}</span>
           <span className="scanner-table-title">
-            {title} RATIO SPREADS
+            RATIO SPREADS
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -131,15 +132,20 @@ export default function ResultTable({
         {results.length > 0 && (
           <table className="scanner-table">
             <thead>
-              <tr>
+              <tr className="scanner-grp-head">
+                <th colSpan={4}>Spread</th>
+                <th className="hide-mobile">&nbsp;</th>
+                <th className="atm-grp" colSpan={3}>ATM Analysis</th>
+              </tr>
+              <tr className="scanner-col-head">
                 <th>Spread Strikes</th>
                 <th>Premium (L/S)</th>
                 <th>Ratio (L/S)</th>
                 <th>Net Premium · IV Edge</th>
                 <th className="hide-mobile">Delta (L/S)</th>
-                <th style={{ borderLeft: '1px solid rgba(240, 185, 11, 0.2)', background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>ATM Fair Value</th>
-                <th style={{ background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>ATM Edge (P&L)</th>
-                <th style={{ borderRight: '1px solid rgba(240, 185, 11, 0.2)', background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>Margin Req.</th>
+                <th className="atm-col atm-col-l">ATM Fair Value</th>
+                <th className="atm-col">ATM Edge (P&L)</th>
+                <th className="atm-col atm-col-r">Margin Req.</th>
               </tr>
             </thead>
             <tbody>
@@ -273,13 +279,16 @@ export default function ResultTable({
                       >
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                            {hasOthers && (
+                            {hasOthers ? (
                               <span className={`scanner-group-toggle ${isExpanded ? 'expanded' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.2s', transform: isExpanded ? 'rotate(0deg)' : 'none' }}>
                                   <polyline points="9 18 15 12 9 6"></polyline>
                                 </svg>
                               </span>
+                            ) : (
+                              <span className="scanner-toggle-spacer" aria-hidden="true" />
                             )}
+                            <span className={`scanner-medal rank-${currentRank <= 3 ? currentRank : 'n'}`}>{currentRank}</span>
                             <div>
                               <div>
                                 <span className={`scanner-buy`}>
@@ -333,14 +342,14 @@ export default function ResultTable({
                           </div>
                         </td>
 
-                        <td style={{ borderLeft: '1px solid rgba(0, 217, 163, 0.1)', background: 'rgba(0, 217, 163, 0.02)' }}>
+                        <td className="atm-cell atm-cell-l">
                           <div>
                             <div className="scanner-buy">{bestRow.buyIntrinsic != null ? `$${bestRow.buyIntrinsic.toFixed(2)}` : '—'}</div>
                             <div className="scanner-sell">{bestRow.sellIntrinsic != null ? `$${bestRow.sellIntrinsic.toFixed(2)}` : '—'}</div>
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>1:{bestRow.roundedAtmRatio}</div>
                           </div>
                         </td>
-                        <td style={{ background: 'rgba(0, 217, 163, 0.02)', fontWeight: 700 }}>
+                        <td className="atm-cell" style={{ fontWeight: 700 }}>
                           {bestRow.hasAtmData ? (
                             <div>
                               <span className={bestRow.atAtmPnl >= 0 ? 'scanner-buy' : 'scanner-sell'}>
@@ -352,7 +361,7 @@ export default function ResultTable({
                             </div>
                           ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                         </td>
-                        <td style={{ borderRight: '1px solid rgba(0, 217, 163, 0.1)', background: 'rgba(0, 217, 163, 0.02)', fontWeight: 700 }}>
+                        <td className="atm-cell atm-cell-r" style={{ fontWeight: 700 }}>
                           ${bestRow.margin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
@@ -413,14 +422,14 @@ export default function ResultTable({
                               </div>
                             </td>
 
-                            <td style={{ borderLeft: '1px solid rgba(0, 217, 163, 0.1)', background: 'rgba(0, 217, 163, 0.01)' }}>
+                            <td className="atm-cell atm-cell-l">
                               <div>
                                 <div className="scanner-buy">{r.buyIntrinsic != null ? `$${r.buyIntrinsic.toFixed(2)}` : '—'}</div>
                                 <div className="scanner-sell">{r.sellIntrinsic != null ? `$${r.sellIntrinsic.toFixed(2)}` : '—'}</div>
                                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>1:{r.roundedAtmRatio}</div>
                               </div>
                             </td>
-                            <td style={{ background: 'rgba(0, 217, 163, 0.01)', fontWeight: 700 }}>
+                            <td className="atm-cell" style={{ fontWeight: 700 }}>
                               {r.hasAtmData ? (
                                 <div>
                                   <span className={r.atAtmPnl >= 0 ? 'scanner-buy' : 'scanner-sell'}>
@@ -432,7 +441,7 @@ export default function ResultTable({
                                 </div>
                               ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                             </td>
-                            <td style={{ borderRight: '1px solid rgba(0, 217, 163, 0.1)', background: 'rgba(0, 217, 163, 0.01)', fontWeight: 700 }}>
+                            <td className="atm-cell atm-cell-r" style={{ fontWeight: 700 }}>
                               ${r.margin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                           </tr>

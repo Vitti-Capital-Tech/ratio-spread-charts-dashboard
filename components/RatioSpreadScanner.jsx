@@ -635,154 +635,195 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
         {/* Topbar Configuration */}
         <div className="scanner-config-bar">
-          <div className="scanner-config-main">
-            <span className="scanner-config-title">RATIO SPREAD ENGINE</span>
-            <div className="form-group row-inline">
-              <label>Underlying:</label>
-              <CustomSelect
-                value={underlying}
-                onChange={val => { setUnderlying(val); stopScan(); }}
-                options={UNDERLYINGS.map(u => ({ label: u, value: u }))}
-                style={{ width: '100px' }}
-              />
+          {/* Top row: engine + instrument + scan action */}
+          <div className="config-top">
+            <span className="eng-title">
+              <span className="eng-bars" aria-hidden="true">
+                <i style={{ height: 6 }}></i>
+                <i style={{ height: 11 }}></i>
+                <i style={{ height: 14 }}></i>
+                <i style={{ height: 8 }}></i>
+              </span>
+              Ratio Spread Engine
+            </span>
+
+            <div className="config-rule hide-mobile"></div>
+
+            <div className="config-zone">
+              <div className="config-field">
+                <label>Underlying</label>
+                <div className="seg" role="tablist">
+                  {UNDERLYINGS.map(u => (
+                    <button
+                      key={u}
+                      type="button"
+                      role="tab"
+                      aria-selected={underlying === u}
+                      className={underlying === u ? 'on' : ''}
+                      onClick={() => { setUnderlying(u); stopScan(); }}
+                    >
+                      <span className="coin" data-coin={u}></span>{u}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="config-field">
+                <label>Expiry</label>
+                <CustomSelect
+                  value={selExpiry}
+                  onChange={val => { setSelExpiry(val); stopScan(); }}
+                  disabled={!expiries.length}
+                  options={!expiries.length ? [{ label: 'Loading…', value: selExpiry }] : expiries.map(e => ({ label: fmtExpiry(e), value: e }))}
+                  style={{ width: '184px' }}
+                />
+              </div>
             </div>
-            <div className="form-group row-inline">
-              <label>Expiry:</label>
-              <CustomSelect
-                value={selExpiry}
-                onChange={val => { setSelExpiry(val); stopScan(); }}
-                disabled={!expiries.length}
-                options={!expiries.length ? [{ label: 'Loading...', value: selExpiry }] : expiries.map(e => ({ label: fmtExpiry(e), value: e }))}
-                style={{ width: '160px' }}
-              />
-            </div>
+
             <button
               className="scanner-filters-toggle-btn"
               onClick={() => setIsFiltersCollapsed(!isFiltersCollapsed)}
             >
               <span>{isFiltersCollapsed ? 'SHOW FILTERS' : 'HIDE FILTERS'}</span>
               <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{
-                  transition: 'transform 0.25s ease',
-                  transform: isFiltersCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
-                }}
+                width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transition: 'transform 0.25s ease', transform: isFiltersCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}
               >
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </button>
           </div>
 
-          <div className="hide-mobile" style={{ width: 1, height: 24, backgroundColor: 'var(--border)' }}></div>
-
-          <div className={`scanner-filters-container ${isFiltersCollapsed ? 'collapsed' : 'expanded'}`}>
-            <span className="scanner-config-title filter-title">SCREEN FILTERS</span>
-            <div className="form-group row-inline">
-              <label>Min Wing Width ($):</label>
-              <CustomInput
-                type="number"
-                value={config.minStrikeDiff}
-                onChange={e => updateConfig('minStrikeDiff', Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-            </div>
-            <div className="form-group row-inline">
-              <label>Min IV Skew Edge (%):</label>
-              <CustomInput
-                type="number"
-                value={config.minIvDiff}
-                onChange={e => updateConfig('minIvDiff', Number(e.target.value))}
-                style={{ width: 50 }}
-              />
-            </div>
-            <div className="form-group row-inline">
-              <label>Max Delta Skew:</label>
-              <CustomInput
-                type="number"
-                step="0.01"
-                value={config.maxRatioDeviation}
-                onChange={e => updateConfig('maxRatioDeviation', Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-            </div>
-            <div className="form-group row-inline">
-              <label>Min Short Leg Premium ($):</label>
-              <CustomInput
-                type="number"
-                value={config.minSellPremium}
-                onChange={e => updateConfig('minSellPremium', Number(e.target.value))}
-                style={{ width: 60 }}
-              />
+          {/* Body: grouped filters */}
+          <div className={`config-body ${isFiltersCollapsed ? 'collapsed' : 'expanded'}`}>
+            <div className="fgroup">
+              <span className="fgroup-label structure">Structure</span>
+              <div className="fgroup-row">
+                <div className="fmini">
+                  <span>Min wing width</span>
+                  <CustomInput type="number" prefix="$" showStepper step={50} width={120}
+                    value={config.minStrikeDiff}
+                    onChange={e => updateConfig('minStrikeDiff', Number(e.target.value))} />
+                </div>
+                <div className="fmini">
+                  <span>Min spot distance</span>
+                  <CustomInput type="number" prefix="$" showStepper step={50} width={120}
+                    value={config.minLongDist}
+                    onChange={e => updateConfig('minLongDist', Number(e.target.value))} />
+                </div>
+                <div className="fmini">
+                  <span>Max short ratio</span>
+                  <CustomInput type="number" prefix="1:" showStepper step={0.25} width={108}
+                    value={config.maxSellQty}
+                    onChange={e => updateConfig('maxSellQty', Number(e.target.value))} />
+                </div>
+              </div>
             </div>
 
-            <div className="form-group row-inline">
-              <label>Max Net Debit ($):</label>
-              <CustomInput
-                type="number"
-                value={config.maxNetPremium}
-                onChange={e => updateConfig('maxNetPremium', Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-            </div>
-            <div className="form-group row-inline">
-              <label>Min SPOT Distance ($):</label>
-              <CustomInput
-                type="number"
-                value={config.minLongDist}
-                onChange={e => updateConfig('minLongDist', Number(e.target.value))}
-                style={{ width: 60 }}
-              />
-            </div>
-            <div className="form-group row-inline">
-              <label>Max Short Ratio (1:X):</label>
-              <CustomInput
-                type="number"
-                step="0.25"
-                value={config.maxSellQty}
-                onChange={e => updateConfig('maxSellQty', Number(e.target.value))}
-                style={{ width: 65 }}
-              />
-            </div>
-            <div key="atmRatioScaling" className="form-group row-inline" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <input type="checkbox" id="atmRatioScaling" checked={config.atmRatioScaling ?? false}
-                onChange={e => updateConfig('atmRatioScaling', e.target.checked)} />
-              <label htmlFor="atmRatioScaling" style={{ cursor: 'pointer', userSelect: 'none' }}>Dynamic ATM Ratio Scaling</label>
-            </div>
-            {config.atmRatioScaling && (
-              <>
-                <div key="atmRatioPctCall" className="form-group row-inline">
-                  <label>Call Side Scale (%):</label>
-                  <CustomInput type="number" step="1" value={config.atmRatioPctCall ?? 50}
-                    onChange={e => updateConfig('atmRatioPctCall', Number(e.target.value))}
-                    style={{ width: 50 }}
-                  />
+            <div className="config-rule"></div>
+
+            <div className="fgroup">
+              <span className="fgroup-label edge">Edge</span>
+              <div className="fgroup-row">
+                <div className="fmini">
+                  <span>Min IV skew edge</span>
+                  <CustomInput type="number" suffix="%" showStepper step={0.5} width={108}
+                    value={config.minIvDiff}
+                    onChange={e => updateConfig('minIvDiff', Number(e.target.value))} />
                 </div>
-                <div key="atmRatioPctPut" className="form-group row-inline">
-                  <label>Put Side Scale (%):</label>
-                  <CustomInput type="number" step="1" value={config.atmRatioPctPut ?? 50}
-                    onChange={e => updateConfig('atmRatioPctPut', Number(e.target.value))}
-                    style={{ width: 50 }}
-                  />
+                <div className="fmini">
+                  <span>Max delta skew</span>
+                  <CustomInput type="number" showStepper step={0.01} width={108}
+                    value={config.maxRatioDeviation}
+                    onChange={e => updateConfig('maxRatioDeviation', Number(e.target.value))} />
                 </div>
-              </>
-            )}
+                <div className="fmini">
+                  <span>Min short premium</span>
+                  <CustomInput type="number" prefix="$" showStepper step={1} width={120}
+                    value={config.minSellPremium}
+                    onChange={e => updateConfig('minSellPremium', Number(e.target.value))} />
+                </div>
+                <div className="fmini">
+                  <span>Max net debit</span>
+                  <CustomInput type="number" prefix="$" showStepper step={1} width={120}
+                    value={config.maxNetPremium}
+                    onChange={e => updateConfig('maxNetPremium', Number(e.target.value))} />
+                </div>
+              </div>
+            </div>
+
+            <div className="config-rule"></div>
+
+            <div className="fgroup">
+              <span className="fgroup-label mode">ATM Mode</span>
+              <div className="fgroup-row" style={{ alignItems: 'center' }}>
+                <div
+                  className={`config-toggle ${config.atmRatioScaling ? 'on' : ''}`}
+                  role="switch"
+                  aria-checked={config.atmRatioScaling ?? false}
+                  tabIndex={0}
+                  onClick={() => updateConfig('atmRatioScaling', !config.atmRatioScaling)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updateConfig('atmRatioScaling', !config.atmRatioScaling); } }}
+                >
+                  <span className="config-toggle-track"></span>
+                  <span className="config-toggle-label">
+                    Dynamic ratio scaling
+                    <small>Scales short qty toward ATM</small>
+                  </span>
+                </div>
+
+                {config.atmRatioScaling && (
+                  <>
+                    <div className="fmini">
+                      <span>Call scale</span>
+                      <CustomInput type="number" suffix="%" showStepper step={5} width={108}
+                        value={config.atmRatioPctCall ?? 50}
+                        onChange={e => updateConfig('atmRatioPctCall', Number(e.target.value))} />
+                    </div>
+                    <div className="fmini">
+                      <span>Put scale</span>
+                      <CustomInput type="number" suffix="%" showStepper step={5} width={108}
+                        value={config.atmRatioPctPut ?? 50}
+                        onChange={e => updateConfig('atmRatioPctPut', Number(e.target.value))} />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          {/* Actions for Start/Stop Scan button */}
-          <div>
+
+          {/* Scan action — sits after the filters on every viewport */}
+          <div className="config-actions">
             <button
-              className={`btn-start ${scanning ? 'btn-stop' : ''}`}
+              className={`scan-btn ${scanning ? 'stop' : 'start'}`}
               onClick={scanning ? handleStopScan : handleStartScan}
               disabled={!selExpiry}
             >
-              {scanning ? '■  STOP SCAN' : '▶  START SCAN'}
+              {scanning ? (
+                <><span className="scan-sq"></span> STOP SCAN</>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                  START SCAN
+                </>
+              )}
             </button>
+          </div>
+
+          {/* Foot: live status */}
+          <div className="config-foot">
+            <span className={`foot-live ${hasLiveFeed ? 'on' : ''}`}>
+              <span className="foot-dot"></span>
+              {scanning ? (hasLiveFeed ? 'Live feed' : 'Connecting…') : 'Idle'}
+            </span>
+            <span><b>{tickerCount}</b>{expectedTickerCount ? ` / ${expectedTickerCount}` : ''} tickers</span>
+            {lastRefreshed > 0 && (
+              <span className="hide-xs">Last scan <b>{new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(new Date(lastRefreshed))}</b></span>
+            )}
+            <span className="foot-setups">
+              <b>{resultsCall.length + resultsPut.length}</b> setups · <b>{resultsCall.length}</b> calls / <b>{resultsPut.length}</b> puts
+            </span>
           </div>
         </div>
 

@@ -1,16 +1,31 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { authClient } from '@/lib/auth-client';
-import { CandlestickChart, AlertCircle, Mail } from 'lucide-react';
+import { CandlestickChart, AlertCircle, Mail, Check } from 'lucide-react';
+
+const OTP_LENGTH = 6;
+const RESEND_COOLDOWN = 60;
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+// Resend countdown ring geometry
+const RING_R = 9;
+const RING_C = 2 * Math.PI * RING_R;
+
+// Deterministic candlestick silhouette for the backdrop (stable across SSR/CSR)
+const CHART_CANDLES = Array.from({ length: 26 }, (_, i) => {
+  const trend = 132 - i * 3.4;
+  const o = trend + Math.sin(i * 0.6) * 16;
+  const c = trend + Math.sin(i * 0.6 + 1.1) * 16;
+  const hi = Math.min(o, c) - (6 + (i % 3) * 4);
+  const lo = Math.max(o, c) + (6 + (i % 2) * 5);
+  return { x: 14 + i * 18, o, c, hi, lo, up: c <= o };
+});
 
 export default function CustomSignIn() {
-  const router = useRouter();
-
   const [step, setStep] = useState('identifier'); // 'identifier' | 'verification'
   const [email, setEmail] = useState('');
-  const [otpArray, setOtpArray] = useState(['', '', '', '', '', '']);
+  const [otpArray, setOtpArray] = useState(Array(OTP_LENGTH).fill(''));
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,15 +37,15 @@ export default function CustomSignIn() {
     register,
     handleSubmit,
     setValue,
-    getValues,
+    watch,
     formState: { errors },
     clearErrors
   } = useForm({
-    defaultValues: {
-      email: '',
-      otp: ''
-    }
+    defaultValues: { email: '', otp: '' }
   });
+
+  const emailValue = watch('email');
+  const emailValid = EMAIL_RE.test((emailValue || '').trim());
 
   // Handle countdown ticks for OTP resend
   useEffect(() => {
@@ -52,12 +67,10 @@ export default function CustomSignIn() {
         type: 'sign-in',
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setStep('verification');
-      setCountdown(60); // Initialize a 60-second cooldown timer
+      setCountdown(RESEND_COOLDOWN);
     } catch (err) {
       console.error('SignIn error:', err);
       setError(err.message || 'An error occurred while sending the code.');
@@ -76,8 +89,8 @@ export default function CustomSignIn() {
         type: 'sign-in',
       });
       if (error) throw error;
-      setCountdown(60);
-      setOtpArray(['', '', '', '', '', '']);
+      setCountdown(RESEND_COOLDOWN);
+      setOtpArray(Array(OTP_LENGTH).fill(''));
       setCode('');
       setValue('otp', '');
       clearErrors('otp');
@@ -98,9 +111,7 @@ export default function CustomSignIn() {
         otp: data.otp,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       // Force authClient to refresh its session cache
       await authClient.getSession();
@@ -114,79 +125,108 @@ export default function CustomSignIn() {
     }
   };
 
+  const commitOtp = (nextOtp) => {
+    setOtpArray(nextOtp);
+    const combined = nextOtp.join('');
+    setCode(combined);
+    setValue('otp', combined, { shouldValidate: true });
+    return combined;
+  };
+
   const handleOtpChange = (e, index) => {
     const val = e.target.value;
     if (isNaN(val)) return;
 
     const newOtp = [...otpArray];
     newOtp[index] = val.slice(-1);
-    setOtpArray(newOtp);
-
-    const combinedCode = newOtp.join('');
-    setCode(combinedCode);
-    setValue('otp', combinedCode, { shouldValidate: true });
+    const combined = commitOtp(newOtp);
 
     // Auto-focus next input box
-    if (val !== "" && index < 5) {
+    if (val !== '' && index < OTP_LENGTH - 1) {
       otpInputsRef.current[index + 1].focus();
+    }
+
+    // Auto-submit once all digits are entered
+    if (combined.length === OTP_LENGTH && !loading) {
+      handleSubmit(handleVerificationSubmit)();
     }
   };
 
   const handleOtpKeyDown = (e, index) => {
-    if (e.key === "Backspace") {
-      if (otpArray[index] === "") {
-        // Move backward and clear previous box
+    if (e.key === 'Backspace') {
+      if (otpArray[index] === '') {
         if (index > 0) {
           const newOtp = [...otpArray];
-          newOtp[index - 1] = "";
-          setOtpArray(newOtp);
-
-          const combinedCode = newOtp.join('');
-          setCode(combinedCode);
-          setValue('otp', combinedCode, { shouldValidate: true });
-
+          newOtp[index - 1] = '';
+          commitOtp(newOtp);
           otpInputsRef.current[index - 1].focus();
         }
       } else {
-        // Clear current box
         const newOtp = [...otpArray];
-        newOtp[index] = "";
-        setOtpArray(newOtp);
-
-        const combinedCode = newOtp.join('');
-        setCode(combinedCode);
-        setValue('otp', combinedCode, { shouldValidate: true });
+        newOtp[index] = '';
+        commitOtp(newOtp);
       }
     }
   };
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").trim().slice(0, 6);
+    const pasteData = e.clipboardData.getData('text').trim().slice(0, OTP_LENGTH);
     if (!/^\d+$/.test(pasteData)) return; // numbers only
 
-    const newOtp = [...otpArray];
-    for (let i = 0; i < 6; i++) {
-      newOtp[i] = pasteData[i] || "";
+    const newOtp = Array(OTP_LENGTH).fill('');
+    for (let i = 0; i < OTP_LENGTH; i++) {
+      newOtp[i] = pasteData[i] || '';
     }
-    setOtpArray(newOtp);
+    const combined = commitOtp(newOtp);
 
-    const combinedCode = newOtp.join('');
-    setCode(combinedCode);
-    setValue('otp', combinedCode, { shouldValidate: true });
-
-    // Focus last pasted element
-    const focusIndex = Math.min(pasteData.length, 5);
+    const focusIndex = Math.min(pasteData.length, OTP_LENGTH - 1);
     otpInputsRef.current[focusIndex].focus();
+
+    if (combined.length === OTP_LENGTH && !loading) {
+      handleSubmit(handleVerificationSubmit)();
+    }
   };
+
+  const otpFilled = code.length === OTP_LENGTH;
 
   return (
     <div className="trader-signin-container">
+      {/* Candlestick silhouette backdrop */}
+      <svg
+        className="trader-chart-bg"
+        viewBox="0 0 480 160"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '46%',
+          opacity: 0.1,
+          zIndex: 0,
+          pointerEvents: 'none',
+          WebkitMaskImage: 'linear-gradient(to top, #000 28%, transparent 100%)',
+          maskImage: 'linear-gradient(to top, #000 28%, transparent 100%)',
+        }}
+      >
+        {CHART_CANDLES.map((k, i) => (
+          <g key={i} stroke={k.up ? 'var(--call)' : 'var(--put)'} fill={k.up ? 'var(--call)' : 'var(--put)'}>
+            <line x1={k.x} x2={k.x} y1={k.hi} y2={k.lo} strokeWidth="1.4" />
+            <rect x={k.x - 4} y={Math.min(k.o, k.c)} width="8" height={Math.max(2, Math.abs(k.o - k.c))} rx="1" />
+          </g>
+        ))}
+      </svg>
+
       <div className="trader-card">
         {/* Brand Header */}
         <div className="brand-header">
           <div className="brand-logo-wrap">
-            <CandlestickChart size={20} color="var(--accent)" style={{ flexShrink: 0 }} />
+            <span className="brand-glyph">
+              <CandlestickChart size={17} color="var(--accent)" style={{ flexShrink: 0 }} />
+            </span>
             <span className="brand-logo-text">VITTI CRYPTO <span>SCANNER</span></span>
           </div>
           <div className="gateway-status">
@@ -202,16 +242,18 @@ export default function CustomSignIn() {
         <p className="trader-subtitle">
           {step === 'identifier'
             ? 'Sign in to access your dashboard'
-            : `Enter the 6-digit code sent to ${email}`}
+            : <>Enter the 6-digit code sent to <strong style={{ color: 'var(--text)' }}>{email}</strong></>}
         </p>
 
-        {/* System Error Message (like API failure) */}
-        {error && (
-          <div className="trader-error">
-            <AlertCircle size={14} style={{ flexShrink: 0 }} />
-            <span>{error}</span>
-          </div>
-        )}
+        {/* Reserved-height error slot — prevents layout shift */}
+        <div className="trader-error-slot">
+          {error && (
+            <div className="trader-error">
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
 
         {/* Step 1: Identifier Input */}
         {step === 'identifier' ? (
@@ -219,7 +261,7 @@ export default function CustomSignIn() {
             <div className="trader-label">
               <span>Email Address</span>
             </div>
-            <div className="trader-input-container" style={{ marginBottom: errors.email ? '14px' : '20px' }}>
+            <div className="trader-input-container" style={{ marginBottom: errors.email ? '14px' : '8px' }}>
               <span className="trader-input-icon">
                 <Mail size={14} />
               </span>
@@ -230,20 +272,22 @@ export default function CustomSignIn() {
                 autoFocus
                 {...register('email', {
                   required: 'Email address is required',
-                  pattern: {
-                    value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-                    message: 'Please enter a valid email address'
-                  }
+                  pattern: { value: EMAIL_RE, message: 'Please enter a valid email address' }
                 })}
               />
+              {emailValid && !errors.email && (
+                <span className="trader-input-valid" aria-hidden="true">
+                  <Check size={14} />
+                </span>
+              )}
             </div>
             {errors.email && (
-              <span className="field-error-text" style={{ marginTop: '-12px', marginBottom: '16px' }}>{errors.email.message}</span>
+              <span className="field-error-text" style={{ marginTop: '-4px', marginBottom: '12px', display: 'block' }}>{errors.email.message}</span>
             )}
+            <p className="trader-hint">We'll email you a 6-digit sign-in code.</p>
             <button type="submit" className="btn-trade" disabled={loading}>
               {loading ? <span className="trade-loader"></span> : 'Send Verification Code'}
             </button>
-
           </form>
         ) : (
           /* Step 2: Verification Input */
@@ -269,8 +313,9 @@ export default function CustomSignIn() {
                   key={index}
                   type="text"
                   pattern="\d*"
+                  inputMode="numeric"
                   maxLength={1}
-                  className={`otp-split-input ${errors.otp ? 'input-error' : ''}`}
+                  className={`otp-split-input${errors.otp ? ' input-error' : ''}${otpFilled ? ' otp-filled' : ''}`}
                   value={digit}
                   ref={(el) => (otpInputsRef.current[index] = el)}
                   onChange={(e) => handleOtpChange(e, index)}
@@ -286,7 +331,7 @@ export default function CustomSignIn() {
               </div>
             )}
 
-            <button type="submit" className="btn-trade" disabled={loading || code.length !== 6}>
+            <button type="submit" className="btn-trade" disabled={loading || !otpFilled}>
               {loading ? <span className="trade-loader"></span> : 'Verify & Sign In'}
             </button>
 
@@ -294,14 +339,26 @@ export default function CustomSignIn() {
             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button
                 type="button"
-                onClick={() => { setStep('identifier'); setOtpArray(['', '', '', '', '', '']); setCode(''); setValue('otp', ''); clearErrors(); setError(''); }}
+                onClick={() => { setStep('identifier'); setOtpArray(Array(OTP_LENGTH).fill('')); setCode(''); setValue('otp', ''); clearErrors(); setError(''); }}
                 style={{ background: 'none', border: 'none', color: '#848e9c', fontSize: '11.5px', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 Change Email
               </button>
 
               {countdown > 0 ? (
-                <span className="resend-text">Resend in {countdown}s</span>
+                <span className="resend-countdown">
+                  <svg width="22" height="22" viewBox="0 0 24 24" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }} aria-hidden="true">
+                    <circle cx="12" cy="12" r={RING_R} fill="none" stroke="var(--border)" strokeWidth="2.4" />
+                    <circle
+                      cx="12" cy="12" r={RING_R}
+                      fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinecap="round"
+                      strokeDasharray={RING_C}
+                      strokeDashoffset={RING_C * (1 - countdown / RESEND_COOLDOWN)}
+                      style={{ transition: 'stroke-dashoffset 0.9s linear' }}
+                    />
+                  </svg>
+                  <span className="resend-text">{countdown}s</span>
+                </span>
               ) : (
                 <button type="button" onClick={handleResend} className="resend-btn" disabled={loading}>
                   Resend Code

@@ -1624,6 +1624,8 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
             <div className={`sidebar-collapsible ${isConfigCollapsed ? '' : 'expanded'}`} style={{ width: '100%', display: isConfigCollapsed ? 'none' : 'flex', flexDirection: 'column', gap: '12px', marginTop: isConfigCollapsed ? '0' : '12px' }}>
 
+              <div className="config-section-label">Instrument</div>
+
               <div className="form-group">
                 <label>Underlying</label>
                 <CustomSelect
@@ -1642,6 +1644,9 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                   options={!expiries.length ? [{ label: 'Loading...', value: selExpiry }] : expiries.map(e => ({ label: fmtExpiry(e), value: e }))}
                 />
               </div>
+
+              <div className="config-divider" aria-hidden="true"></div>
+              <div className="config-section-label">Legs</div>
 
               <div className="form-group" style={{ opacity: legType === 'put' ? 0.5 : 1 }}>
                 <label>Call Strike</label>
@@ -1675,6 +1680,9 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                   ]}
                 />
               </div>
+
+              <div className="config-divider" aria-hidden="true"></div>
+              <div className="config-section-label">View</div>
 
               <div className="form-group">
                 <label>Price Feed</label>
@@ -1822,114 +1830,87 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                   }
                 }
 
+                const greek = (label, baseKey, decimals, color, pct = false) => {
+                  const cap = baseKey.charAt(0).toUpperCase() + baseKey.slice(1);
+                  const cv = data.greeks?.['c' + cap];
+                  const pv = data.greeks?.['p' + cap];
+                  const sv = data.greeks?.[baseKey];
+                  const f = (v) => (pct ? (v * 100).toFixed(1) + '%' : v.toFixed(decimals));
+                  const isComb = item.type === 'combined' && cv != null;
+                  return (
+                    <div className="watch-metric">
+                      <span className="watch-metric-label">{label}</span>
+                      {isComb ? (
+                        <span className="watch-metric-val split">
+                          <span style={{ color: 'var(--call)' }}>{f(cv)}</span>
+                          <span className="watch-metric-sep">|</span>
+                          <span style={{ color: 'var(--put)' }}>{f(pv)}</span>
+                        </span>
+                      ) : (
+                        <span className="watch-metric-val" style={{ color }}>{sv != null ? f(sv) : '—'}</span>
+                      )}
+                    </div>
+                  );
+                };
+
                 return (
                   <div key={item.id} onClick={() => setSelectedWatchId(item.id)}
-                    className={`watch-item ${isSelected ? 'selected' : ''}`}
+                    className={`watch-card watch-item-${item.type} ${isSelected ? 'selected' : ''}`}
                     style={{ backgroundColor: theme == 'dark' ? '' : isSelected ? '#b8f5f7' : '#e6edf3' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                      <div className="watch-item-title">
-                        {item.type === 'combined' ? (
-                          <><span className="badge comb">STRADDLE</span> {item.callStrike}C + {item.putStrike}P</>
-                        ) : item.type === 'call' ? (
-                          <><span className="badge call">CALL</span> {item.callStrike}C</>
-                        ) : (
-                          <><span className="badge put">PUT</span> {item.putStrike}P</>
-                        )}
-                        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4, letterSpacing: 0.5 }}>{fmtExpiry(item.expiry)}</div>
+
+                    <div className="watch-card-head">
+                      <div className="watch-card-id">
+                        <span className="watch-card-instrument">
+                          {item.type === 'combined' ? (
+                            <><span className="badge comb">STRADDLE</span> {item.callStrike}C + {item.putStrike}P</>
+                          ) : item.type === 'call' ? (
+                            <><span className="badge call">CALL</span> {item.callStrike}C</>
+                          ) : (
+                            <><span className="badge put">PUT</span> {item.putStrike}P</>
+                          )}
+                        </span>
+                        <span className="watch-card-expiry">{fmtExpiry(item.expiry)}</span>
                       </div>
 
-                      <div className="watch-item-prices">
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">LIVE</span>
-                          <span className={`watch-price-val live ${data.price > 0 ? 'highlight' : ''}`}>{data.price > 0 ? data.price.toFixed(2) : '—'}</span>
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">1H HIGH</span>
-                          <span className="watch-price-val high">{data.high > 0 ? data.high.toFixed(2) : '—'}</span>
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">1H LOW</span>
-                          <span className="watch-price-val low">{data.low < Infinity && data.low > 0 ? data.low.toFixed(2) : '—'}</span>
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">DELTA</span>
-                          {item.type === 'combined' && data.greeks?.cDelta != null ? (
-                            <div className="watch-price-val" style={{ fontSize: 11, display: 'flex', alignItems: 'center' }}>
-                              <span style={{ color: 'var(--call)' }}>{data.greeks.cDelta.toFixed(4)}</span>
-                              <span style={{ margin: '0 8px', opacity: 0.15 }}>|</span>
-                              <span style={{ color: 'var(--put)' }}>{data.greeks.pDelta.toFixed(4)}</span>
-                            </div>
-                          ) : (
-                            <span className="watch-price-val" style={{ color: 'var(--accent)', fontSize: 13 }}>{data.greeks?.delta != null ? data.greeks.delta.toFixed(4) : '—'}</span>
-                          )}
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">GAMMA</span>
-                          {item.type === 'combined' && data.greeks?.cGamma != null ? (
-                            <div className="watch-price-val" style={{ fontSize: 11, display: 'flex', alignItems: 'center' }}>
-                              <span style={{ color: 'var(--call)' }}>{data.greeks.cGamma.toFixed(5)}</span>
-                              <span style={{ margin: '0 8px', opacity: 0.15 }}>|</span>
-                              <span style={{ color: 'var(--put)' }}>{data.greeks.pGamma.toFixed(5)}</span>
-                            </div>
-                          ) : (
-                            <span className="watch-price-val" style={{ color: 'var(--accent)', fontSize: 13 }}>{data.greeks?.gamma != null ? data.greeks.gamma.toFixed(5) : '—'}</span>
-                          )}
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">VEGA</span>
-                          {item.type === 'combined' && data.greeks?.cVega != null ? (
-                            <div className="watch-price-val" style={{ fontSize: 11, display: 'flex', alignItems: 'center' }}>
-                              <span style={{ color: 'var(--call)' }}>{data.greeks.cVega.toFixed(2)}</span>
-                              <span style={{ margin: '0 8px', opacity: 0.15 }}>|</span>
-                              <span style={{ color: 'var(--put)' }}>{data.greeks.pVega.toFixed(2)}</span>
-                            </div>
-                          ) : (
-                            <span className="watch-price-val" style={{ color: 'var(--comb)', fontSize: 13 }}>{data.greeks?.vega != null ? data.greeks.vega.toFixed(2) : '—'}</span>
-                          )}
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">THETA</span>
-                          {item.type === 'combined' && data.greeks?.cTheta != null ? (
-                            <div className="watch-price-val" style={{ fontSize: 11, display: 'flex', alignItems: 'center' }}>
-                              <span style={{ color: 'var(--call)' }}>{data.greeks.cTheta.toFixed(2)}</span>
-                              <span style={{ margin: '0 8px', opacity: 0.15 }}>|</span>
-                              <span style={{ color: 'var(--put)' }}>{data.greeks.pTheta.toFixed(2)}</span>
-                            </div>
-                          ) : (
-                            <span className="watch-price-val" style={{ color: '#ff7b72', fontSize: 13 }}>{data.greeks?.theta != null ? data.greeks.theta.toFixed(2) : '—'}</span>
-                          )}
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">RHO</span>
-                          {item.type === 'combined' && data.greeks?.cRho != null ? (
-                            <div className="watch-price-val" style={{ fontSize: 11, display: 'flex', alignItems: 'center' }}>
-                              <span style={{ color: 'var(--call)' }}>{data.greeks.cRho.toFixed(4)}</span>
-                              <span style={{ margin: '0 8px', opacity: 0.15 }}>|</span>
-                              <span style={{ color: 'var(--put)' }}>{data.greeks.pRho.toFixed(4)}</span>
-                            </div>
-                          ) : (
-                            <span className="watch-price-val" style={{ color: '#58a6ff', fontSize: 13 }}>{data.greeks?.rho != null ? data.greeks.rho.toFixed(4) : '—'}</span>
-                          )}
-                        </div>
-                        <div className="watch-price-block">
-                          <span className="watch-price-label">IV %</span>
-                          {item.type === 'combined' && data.greeks?.cIv != null ? (
-                            <div className="watch-price-val" style={{ fontSize: 11, display: 'flex', alignItems: 'center' }}>
-                              <span style={{ color: 'var(--call)' }}>{(data.greeks.cIv * 100).toFixed(1)}%</span>
-                              <span style={{ margin: '0 8px', opacity: 0.15 }}>|</span>
-                              <span style={{ color: 'var(--put)' }}>{(data.greeks.pIv * 100).toFixed(1)}%</span>
-                            </div>
-                          ) : (
-                            <span className="watch-price-val" style={{ color: 'var(--comb)', fontSize: 13 }}>{data.greeks?.iv != null ? (data.greeks.iv * 100).toFixed(1) : '—'}%</span>
-                          )}
-                        </div>
+                      <div className="watch-card-live">
+                        <span className="watch-card-live-label">LIVE</span>
+                        <span className={`watch-card-live-val ${data.price > 0 ? 'highlight' : ''}`}>{data.price > 0 ? data.price.toFixed(2) : '—'}</span>
                       </div>
+
+                      <button className="watch-delete-btn" title="Remove strategy" onClick={(e) => {
+                        e.stopPropagation();
+                        setWatchList(prev => prev.filter(w => w.id !== item.id));
+                        setListData(prev => { const next = { ...prev }; delete next[item.id]; return next; });
+                        if (selectedWatchId === item.id) setSelectedWatchId(null);
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} onClick={e => e.stopPropagation()}>
+                    <div className="watch-card-metrics">
+                      <div className="watch-metric">
+                        <span className="watch-metric-label">1H HIGH</span>
+                        <span className="watch-metric-val" style={{ color: 'var(--call)' }}>{data.high > 0 ? data.high.toFixed(2) : '—'}</span>
+                      </div>
+                      <div className="watch-metric">
+                        <span className="watch-metric-label">1H LOW</span>
+                        <span className="watch-metric-val" style={{ color: 'var(--put)' }}>{data.low < Infinity && data.low > 0 ? data.low.toFixed(2) : '—'}</span>
+                      </div>
+                      {greek('DELTA', 'delta', 4, 'var(--accent)')}
+                      {greek('GAMMA', 'gamma', 5, 'var(--accent)')}
+                      {greek('VEGA', 'vega', 2, 'var(--comb)')}
+                      {greek('THETA', 'theta', 2, '#ff7b72')}
+                      {greek('RHO', 'rho', 4, '#58a6ff')}
+                      {greek('IV %', 'iv', 1, 'var(--comb)', true)}
+                    </div>
+
+                    <div className="watch-card-alerts" onClick={e => e.stopPropagation()}>
                       {/* Alerts Section */}
                       <div className="watch-alert-pill" style={{ height: 'auto', minHeight: 32, padding: '4px 8px' }}>
-                        <div className="watch-alert-icon-wrap" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+                        <div className="watch-alert-icon-wrap" style={{ alignSelf: 'flex-start', marginTop: 8 }}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e3b341" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -2015,17 +1996,6 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                           </div>
                         </div>
                       </div>
-
-                      <button className="watch-delete-btn" title="Remove strategy" onClick={() => {
-                        setWatchList(prev => prev.filter(w => w.id !== item.id));
-                        setListData(prev => { const next = { ...prev }; delete next[item.id]; return next; });
-                        if (selectedWatchId === item.id) setSelectedWatchId(null);
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                      </button>
                     </div>
                   </div>
                 );
@@ -2044,7 +2014,13 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
               gap: 12,
               minHeight: 250,
             }}>
-              {phase === 'loading' && <div className="spinner" />}
+              {phase === 'loading' && (
+                <div className="eq-bars" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 4, height: 30 }}>
+                  {[14, 24, 30, 20, 12].map((h, n) => (
+                    <i key={n} style={{ width: 5, height: h, borderRadius: 2, background: 'var(--accent)', transformOrigin: 'bottom', display: 'block' }} />
+                  ))}
+                </div>
+              )}
               <div style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>
                 {phase === 'loading' ? 'LOADING CANDLES…' : 'PREMIUM CHART TERMINAL'}
               </div>
