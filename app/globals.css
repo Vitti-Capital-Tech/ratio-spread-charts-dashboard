@@ -293,8 +293,7 @@ body,
 }
 
 .card {
-  background: var(--bg3);
-  background: linear-gradient(160deg, var(--bg3) 0%, var(--bg2) 100%);
+  background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px 14px;
@@ -1212,12 +1211,23 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 
 /* ── Charts config panel sections ── */
 .config-section-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 1.3px;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
-  color: var(--text-dim);
-  padding-left: 1px;
+  color: var(--accent);
+}
+
+.config-section-label::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--accent);
+  flex-shrink: 0;
 }
 
 .config-divider {
@@ -3320,7 +3330,7 @@ body.light-theme .pt-live-badge {
   justify-content: flex-end;
   padding: 12px 20px;
   border-top: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0) !important;
 }
 
 .config-zone {
@@ -3454,7 +3464,7 @@ body.light-theme .pt-live-badge {
   flex-wrap: wrap;
   padding: 14px 20px;
   border-top: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0);
 }
 
 .config-body .config-rule {

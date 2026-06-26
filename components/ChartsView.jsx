@@ -1628,11 +1628,20 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
               <div className="form-group">
                 <label>Underlying</label>
-                <CustomSelect
-                  value={underlying}
-                  onChange={val => setUnderlying(val)}
-                  options={UNDERLYINGS.map(u => ({ label: u, value: u }))}
-                />
+                <div className="seg" role="tablist">
+                  {UNDERLYINGS.map(u => (
+                    <button
+                      key={u}
+                      type="button"
+                      role="tab"
+                      aria-selected={underlying === u}
+                      className={underlying === u ? 'on' : ''}
+                      onClick={() => setUnderlying(u)}
+                    >
+                      <span className="coin" data-coin={u}></span>{u}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="form-group">
