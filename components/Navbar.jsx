@@ -5,6 +5,17 @@ import { usePathname } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
 import { CandlestickChart, BarChart3, Target, Sun, Moon } from 'lucide-react';
 
+// Small equalizer-bar loader used for navbar status (session check / signing out)
+function MiniBars() {
+  return (
+    <span className="eq-bars" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2.5, height: 14 }}>
+      {[6, 11, 14, 9, 5].map((h, n) => (
+        <i key={n} style={{ width: 3, height: h, borderRadius: 1, background: 'var(--accent)', transformOrigin: 'bottom', display: 'block' }} />
+      ))}
+    </span>
+  );
+}
+
 export default function Navbar({
   theme,
   toggleTheme,
@@ -19,6 +30,7 @@ export default function Navbar({
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
   const [showSignOut, setShowSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const signOutRef = useRef(null);
 
   const activeTab = activeTabOverride || (pathname.includes('/ratio-spread') ? 'scanner' : 'charts');
@@ -44,7 +56,12 @@ export default function Navbar({
 
   const handleSignOut = async () => {
     setShowSignOut(false);
-    await authClient.signOut();
+    setSigningOut(true); // hold this state through the redirect so the UI never flashes "Sign In"
+    try {
+      await authClient.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
     window.location.href = '/';
   };
 
@@ -93,18 +110,10 @@ export default function Navbar({
 
           {isPending ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px' }}>
-              <span className="eq-bars" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2.5, height: 14 }}>
-                {[6, 11, 14, 9, 5].map((h, n) => (
-                  <i key={n} style={{ width: 3, height: h, borderRadius: 1, background: 'var(--accent)', transformOrigin: 'bottom', display: 'block' }} />
-                ))}
-              </span>
+              <MiniBars />
               <span style={{ fontSize: '13px', color: 'var(--text-dim)' }}>Checking session…</span>
             </span>
-          ) : !user ? (
-            <Link href="/sign-in" className="nav-tab" style={{ padding: '6px 14px', background: 'var(--accent)', color: '#000', border: 'none', textDecoration: 'none' }}>
-              Sign In / 2FA
-            </Link>
-          ) : (
+          ) : user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span className="nav-user-email" title={user.email}>
                 {user.email}
@@ -129,7 +138,7 @@ export default function Navbar({
                 )}
               </div>
             </div>
-          )}
+          ) : null}
 
           <div className="ws-badge">
             <div className={`ws-dot ${badgeDotClassName || ''}`} style={badgeColor ? { background: badgeColor } : undefined} />
@@ -162,6 +171,46 @@ export default function Navbar({
           <span className="mobile-bottom-text">Ratio Spread</span>
         </Link>
       </div>
+
+      {/* Full-screen sign-out transition */}
+      {signingOut && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 18,
+            background: 'radial-gradient(ellipse at 50% 35%, rgba(240,185,11,0.05) 0%, transparent 60%), var(--bg)',
+            WebkitBackdropFilter: 'blur(2px)',
+            backdropFilter: 'blur(2px)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <span className="brand-glyph" style={{
+              width: 30, height: 30, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0,
+              background: 'linear-gradient(150deg, rgba(240,185,11,0.18), rgba(240,185,11,0.04))',
+              border: '1px solid rgba(240,185,11,0.28)'
+            }}>
+              <CandlestickChart size={18} color="var(--accent)" style={{ flexShrink: 0 }} />
+            </span>
+            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: 1, color: 'var(--accent)' }}>
+              VITTI CRYPTO <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>SCANNER</span>
+            </span>
+          </div>
+          <span className="eq-bars" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 4, height: 28 }}>
+            {[14, 24, 28, 18, 11].map((h, n) => (
+              <i key={n} style={{ width: 5, height: h, borderRadius: 2, background: 'var(--accent)', transformOrigin: 'bottom', display: 'block' }} />
+            ))}
+          </span>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: 'var(--text-dim)' }}>
+            Signing out…
+          </div>
+        </div>
+      )}
     </>
   );
 }
