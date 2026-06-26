@@ -4933,29 +4933,6 @@ body.light-theme .pt-btn-apply.active {
   color: var(--text-dim) !important;
 }
 
-/* ── Filter toggle button — more visible ─────────── */
-.scanner-filters-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg3) !important;
-  border: 1px solid var(--border) !important;
-  color: var(--text) !important;
-  padding: 6px 12px !important;
-  border-radius: 6px !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  cursor: pointer;
-  letter-spacing: 0.5px;
-  transition: all 0.2s ease !important;
-}
-
-.scanner-filters-toggle-btn:hover {
-  background: rgba(240, 185, 11, 0.08) !important;
-  border-color: rgba(240, 185, 11, 0.4) !important;
-  color: var(--accent) !important;
-}
-
 /* ── Scanner config bar inputs — focus ring ──────── */
 .scanner-config-bar input:focus,
 .scanner-config-bar select:focus {
