@@ -638,7 +638,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
           <div className="scanner-config-main">
             <span className="scanner-config-title">RATIO SPREAD ENGINE</span>
             <div className="form-group row-inline">
-              <label>Asset:</label>
+              <label>Underlying:</label>
               <CustomSelect
                 value={underlying}
                 onChange={val => { setUnderlying(val); stopScan(); }}
@@ -732,7 +732,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               />
             </div>
             <div className="form-group row-inline">
-              <label>Min OTM Distance ($):</label>
+              <label>Min SPOT Distance ($):</label>
               <CustomInput
                 type="number"
                 value={config.minLongDist}
@@ -781,7 +781,7 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               onClick={scanning ? handleStopScan : handleStartScan}
               disabled={!selExpiry}
             >
-              {scanning ? '■  HALT SCAN' : '▶  LAUNCH SCAN'}
+              {scanning ? '■  STOP SCAN' : '▶  START SCAN'}
             </button>
           </div>
         </div>

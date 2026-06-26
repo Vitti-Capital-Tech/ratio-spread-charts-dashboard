@@ -109,7 +109,7 @@ export default function ResultTable({
             </div>
             <div className="scanner-empty-title">NO SETUPS FOUND — {type} SIDE</div>
             <div className="scanner-empty-desc">
-              Adjust your Greeks or strike filters to identify viable ratio spread opportunities.
+              Configure filters and click START SCANNER to find optimal ratio spread opportunities in real-time.
             </div>
           </div>
         )}
@@ -132,13 +132,13 @@ export default function ResultTable({
           <table className="scanner-table">
             <thead>
               <tr>
-                <th>Wings (L / S)</th>
-                <th>Leg Premiums</th>
-                <th>Sell Ratio</th>
-                <th>Net Debit · IV Edge</th>
-                <th className="hide-mobile">Net Δ (L / S)</th>
+                <th>Spread Strikes</th>
+                <th>Premium (L/S)</th>
+                <th>Ratio (L/S)</th>
+                <th>Net Premium · IV Edge</th>
+                <th className="hide-mobile">Delta (L/S)</th>
                 <th style={{ borderLeft: '1px solid rgba(240, 185, 11, 0.2)', background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>ATM Fair Value</th>
-                <th style={{ background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>ATM P&amp;L</th>
+                <th style={{ background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>ATM Edge (P&L)</th>
                 <th style={{ borderRight: '1px solid rgba(240, 185, 11, 0.2)', background: 'rgba(240, 185, 11, 0.04)', color: 'var(--accent)' }}>Margin Req.</th>
               </tr>
             </thead>

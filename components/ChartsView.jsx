@@ -673,7 +673,7 @@ const ChartPanel = forwardRef(function ChartPanel({
 export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarProps, userKey }) {
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
   useEffect(() => { setIsConfigCollapsed(window.innerWidth <= 900); }, []);
-  
+
   const [isLoaded, setIsLoaded] = useState(false);
   const [underlying, setUnderlying] = useState('BTC');
   const [tf, setTf] = useState('1m');
@@ -691,7 +691,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   const [watchList, setWatchList] = useState([]);
   const watchListRef = useRef(watchList);
   useEffect(() => { watchListRef.current = watchList; }, [watchList]);
-  
+
   const [listData, setListData] = useState({}); // Stores { price, high, low } per item ID
   const [selectedWatchId, setSelectedWatchId] = useState(null);
 
@@ -713,7 +713,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
     if (savedWatchlist) {
       try {
         setWatchList(JSON.parse(savedWatchlist));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const savedSelectedWatchId = localStorage.getItem(`${userKey}_vitti_charts_selected_watch_id`);
@@ -1625,7 +1625,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             <div className={`sidebar-collapsible ${isConfigCollapsed ? '' : 'expanded'}`} style={{ width: '100%', display: isConfigCollapsed ? 'none' : 'flex', flexDirection: 'column', gap: '12px', marginTop: isConfigCollapsed ? '0' : '12px' }}>
 
               <div className="form-group">
-                <label>Asset</label>
+                <label>Underlying</label>
                 <CustomSelect
                   value={underlying}
                   onChange={val => setUnderlying(val)}
