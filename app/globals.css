@@ -5812,24 +5812,35 @@ body.light-theme .pt-btn-apply.active {
 
 .otp-splits-wrapper {
   display: flex;
-  justify-content: space-between;
   gap: 8px;
   margin-bottom: 20px;
+  width: 100%;
 }
 
 .otp-split-input {
-  width: 48px;
-  height: 56px;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: 52px;
+  aspect-ratio: 47 / 56;
+  height: auto;
   background: var(--bg);
   border: 1.5px solid var(--border, #2b2f36);
   border-radius: 8px;
   color: var(--text, #eaecef);
-  font-size: 22px;
+  font-size: clamp(16px, 7vw, 22px);
   font-weight: 700;
   font-family: 'Inter', monospace;
   text-align: center;
   transition: all 0.2s ease;
   letter-spacing: 0;
+  padding: 0;
+}
+
+@media (max-width: 380px) {
+  .otp-splits-wrapper {
+    gap: 6px;
+  }
 }
 
 .otp-split-input:focus {
