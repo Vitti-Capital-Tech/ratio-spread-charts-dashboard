@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from 'react';
+import { RefreshCw, ChevronRight } from 'lucide-react';
 
 export default function ResultTable({
   title,
@@ -91,9 +92,7 @@ export default function ResultTable({
               minWidth: '50px', justifyContent: 'center'
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C15.5398 3 18.5997 5.04419 20.0886 8M20.0886 8H16.0886M20.0886 8V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <RefreshCw size={14} strokeWidth={2} />
           </button>
         </div>
       </div>
@@ -281,9 +280,7 @@ export default function ResultTable({
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
                             {hasOthers ? (
                               <span className={`scanner-group-toggle ${isExpanded ? 'expanded' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.2s', transform: isExpanded ? 'rotate(0deg)' : 'none' }}>
-                                  <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
+                                <ChevronRight size={12} strokeWidth={3} />
                               </span>
                             ) : (
                               <span className="scanner-toggle-spacer" aria-hidden="true" />

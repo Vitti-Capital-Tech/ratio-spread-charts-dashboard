@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
+import { ChevronDown, Check } from 'lucide-react';
 
 export default function CustomSelect({ 
   options, 
@@ -45,21 +46,15 @@ export default function CustomSelect({
         <div className="custom-dropdown-trigger-content">
           <span className="custom-dropdown-name">{selectedOption?.label || 'Select...'}</span>
         </div>
-        <svg
+        <ChevronDown
           className="custom-chevron-icon"
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
+          size={12}
+          strokeWidth={2.5}
           style={{
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s ease'
           }}
-        >
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
+        />
       </button>
 
       {isOpen && !disabled && (
@@ -86,9 +81,7 @@ export default function CustomSelect({
                     <span className="custom-dropdown-item-meta">{opt.meta}</span>
                   )}
                   {isSelected && (
-                    <svg className="custom-selected-checkmark" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="3">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
+                    <Check className="custom-selected-checkmark" size={14} strokeWidth={3} color="var(--accent)" />
                   )}
                 </button>
               );

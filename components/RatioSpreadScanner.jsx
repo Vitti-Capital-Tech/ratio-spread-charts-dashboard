@@ -9,6 +9,7 @@ const UNDERLYINGS = ['BTC', 'ETH'];
 const SCANNER_TOP_KEY = 'vitti_scanner_top_spreads_v1';
 
 import ResultTable from './ResultTable';
+import { TrendingUp, TrendingDown, ChevronDown, Play, Square } from 'lucide-react';
 import { normalizeIv, toFiniteNumber, matchesOptionType } from '../lib/scannerUtils';
 import CustomSelect from './common/CustomSelect';
 import CustomInput from './common/CustomInput';
@@ -685,13 +686,11 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               onClick={() => setIsFiltersCollapsed(!isFiltersCollapsed)}
             >
               <span>{isFiltersCollapsed ? 'SHOW FILTERS' : 'HIDE FILTERS'}</span>
-              <svg
-                width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              <ChevronDown
+                size={12}
+                strokeWidth={2.5}
                 style={{ transition: 'transform 0.25s ease', transform: isFiltersCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
+              />
             </button>
           </div>
 
@@ -801,10 +800,10 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
               disabled={!selExpiry}
             >
               {scanning ? (
-                <><span className="scan-sq"></span> STOP SCAN</>
+                <><Square size={11} fill="currentColor" strokeWidth={0} /> STOP SCAN</>
               ) : (
                 <>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                  <Play size={11} fill="currentColor" strokeWidth={0} />
                   START SCAN
                 </>
               )}
@@ -828,8 +827,12 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
         </div>
 
         <div className="scanner-mobile-tabs">
-          <div className={`scanner-mobile-tab ${activeTableTab === 'call' ? 'active' : ''}`} onClick={() => setActiveTableTab('call')}>📈 Call Spreads</div>
-          <div className={`scanner-mobile-tab ${activeTableTab === 'put' ? 'active' : ''}`} onClick={() => setActiveTableTab('put')}>📉 Put Spreads</div>
+          <div className={`scanner-mobile-tab ${activeTableTab === 'call' ? 'active' : ''}`} onClick={() => setActiveTableTab('call')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+            <TrendingUp size={15} style={{ flexShrink: 0 }} /> Call Spreads
+          </div>
+          <div className={`scanner-mobile-tab ${activeTableTab === 'put' ? 'active' : ''}`} onClick={() => setActiveTableTab('put')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+            <TrendingDown size={15} style={{ flexShrink: 0 }} /> Put Spreads
+          </div>
         </div>
 
         <main className={`main scanner-main show-${activeTableTab}`} style={{ position: 'relative', padding: 12, gap: 12, display: 'flex', flexDirection: 'row', overflow: 'hidden', flex: 1 }}>

@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 const CustomInput = React.forwardRef(({
   type = 'text',
@@ -71,14 +72,10 @@ const CustomInput = React.forwardRef(({
       {showStepper && (
         <span className="uin-step">
           <button type="button" tabIndex={-1} aria-label="Increase" onClick={() => bump(1)} disabled={disabled}>
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 15 12 9 18 15" />
-            </svg>
+            <ChevronUp size={9} strokeWidth={3} />
           </button>
           <button type="button" tabIndex={-1} aria-label="Decrease" onClick={() => bump(-1)} disabled={disabled}>
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            <ChevronDown size={9} strokeWidth={3} />
           </button>
         </span>
       )}
