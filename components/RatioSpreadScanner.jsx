@@ -420,6 +420,39 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
   const computeSpreads = useCallback((force = false) => {
     if (!scanning || !spotPrice) return;
 
+    // Mirror of ResultTable.getTickerPrice: best price for a strike + type,
+    // falling back to the nearest strike within a tight tolerance. Used to
+    // anchor the ATM ratio when atmRatioScaling is enabled.
+    const getTickerPrice = (strike, optType, priceField) => {
+      const pool = Object.values(latestTickerDataRef.current).filter(
+        t => t.underlying === underlying && t.expiry === selExpiry && t.type === optType
+      );
+      if (!pool.length) return null;
+
+      const exact = pool.find(t => t.strike === strike);
+      if (exact) {
+        const val = exact[priceField] ?? exact.lastPrice ?? exact.markPrice;
+        return (val != null && val > 0) ? val : null;
+      }
+
+      const sampleSymbol = pool[0]?.symbol || '';
+      const isEth = sampleSymbol.includes('ETH');
+      const maxTolerance = isEth ? 50 : 500;
+
+      let nearest = null;
+      let minDist = Infinity;
+      for (const t of pool) {
+        const dist = Math.abs(t.strike - strike);
+        if (dist < minDist && dist <= maxTolerance) {
+          minDist = dist;
+          nearest = t;
+        }
+      }
+      if (!nearest) return null;
+      const val = nearest[priceField] ?? nearest.lastPrice ?? nearest.markPrice;
+      return (val != null && val > 0) ? val : null;
+    };
+
     const scanTickers = (tickers) => {
       if (tickers.length < 2) return [];
 
@@ -490,7 +523,31 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
           const netPrem = sellQty * sellPrice - buyPrice;
 
-          if (netPrem < -config.maxNetPremium) continue;
+          // Apply ATM ratio scaling first (mirrors ResultTable): scale the short
+          // qty toward the ATM-anchored ratio, then gate max debit on the net
+          // premium that the table will actually display — keeping the scanner's
+          // filter and the displayed value consistent.
+          let effectiveNetPrem = netPrem;
+          const optType = buyLeg.type; // 'call' | 'put' (uniform within this scan)
+          if (config.atmRatioScaling && atmStrike != null) {
+            const buyIntrinsic = getTickerPrice(atmStrike, optType, 'bid');
+            const targetSellStrike = optType === 'call'
+              ? atmStrike + strikeDiff
+              : atmStrike - strikeDiff;
+            const sellIntrinsic = getTickerPrice(targetSellStrike, optType, 'ask');
+            const atmRatio = (buyIntrinsic != null && sellIntrinsic != null && sellIntrinsic > 0)
+              ? buyIntrinsic / sellIntrinsic
+              : null;
+            if (atmRatio != null) {
+              const pct = optType === 'call' ? config.atmRatioPctCall : config.atmRatioPctPut;
+              const atmRatioVal = Math.round(atmRatio / 0.25) * 0.25;
+              const diff = Math.max(0, atmRatioVal - sellQty);
+              const scaledSellQty = Math.max(sellQty, Math.round((sellQty + (pct / 100) * diff) / 0.25) * 0.25);
+              effectiveNetPrem = sellPrice * scaledSellQty - buyPrice;
+            }
+          }
+
+          if (effectiveNetPrem < -config.maxNetPremium) continue;
 
           validPairs.push({
             buyLeg,
