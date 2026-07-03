@@ -133,7 +133,7 @@ export default function ResultTable({
             <thead>
               <tr className="scanner-grp-head">
                 <th colSpan={4}>Spread</th>
-                <th className="hide-mobile">&nbsp;</th>
+                <th>&nbsp;</th>
                 <th className="atm-grp" colSpan={3}>ATM Analysis</th>
               </tr>
               <tr className="scanner-col-head">
@@ -141,7 +141,7 @@ export default function ResultTable({
                 <th><div>Premium</div><div> (L/S)</div></th>
                 <th><div>Ratio</div><div> (L/S)</div></th>
                 <th><div>Net</div><div>Premium</div></th>
-                <th className="hide-mobile"><div>Delta</div><div> (L/S)</div></th>
+                <th><div>Delta</div><div> (L/S)</div></th>
                 <th className="atm-col atm-col-l">ATM</th>
                 <th className="atm-col"><div>ATM</div><div>(P&L)</div></th>
                 <th className="atm-col atm-col-r">Margin</th>
@@ -286,11 +286,11 @@ export default function ResultTable({
                               <span className="scanner-toggle-spacer" aria-hidden="true" />
                             )}
                             <div>
-                              <div>
+                              <div className="scanner-strike-pair">
                                 <span className={`scanner-buy`}>
                                   {bestRow.buyLeg.strike.toLocaleString()}
                                 </span>
-                                /
+                                <span className="scanner-strike-sep">/</span>
                                 <span className={`scanner-sell`}>
                                   {bestRow.sellLeg.strike.toLocaleString()}
                                 </span>
@@ -328,7 +328,7 @@ export default function ResultTable({
                             {bestRow.ivDiff.toFixed(1)}%
                           </div>
                         </td>
-                        <td className="hide-mobile">
+                        <td>
                           <div>
                             <span className='scanner-buy'>{bestRow.buyLeg.lotSize}</span>/
                             <span className='scanner-sell'>{bestRow.sellLeg.delta?.toFixed(4)}</span>
@@ -367,11 +367,11 @@ export default function ResultTable({
                           <tr key={`${r.buyLeg.strike}-${r.sellLeg.strike}`} className="scanner-row-sub">
                             <td>
                               <div>
-                                <div>
+                                <div className="scanner-strike-pair">
                                   <span className={`scanner-buy`}>
                                     {r.buyLeg.strike.toLocaleString()}
                                   </span>
-                                  /
+                                  <span className="scanner-strike-sep">/</span>
                                   <span className={`scanner-sell`}>
                                     {r.sellLeg.strike.toLocaleString()}
                                   </span>
@@ -408,7 +408,7 @@ export default function ResultTable({
                                 {r.ivDiff.toFixed(1)}%
                               </div>
                             </td>
-                            <td className="hide-mobile">
+                            <td>
                               <div>
                                 <span className='scanner-buy'>{r.buyLeg.lotSize}</span>/
                                 <span className='scanner-sell'>{r.sellLeg.delta?.toFixed(4)}</span>

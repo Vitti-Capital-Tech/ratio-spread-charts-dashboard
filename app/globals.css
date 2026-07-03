@@ -640,6 +640,7 @@ select:disabled {
   border-radius: 8px;
   overflow: hidden;
   min-height: 0;
+  min-width: 0;
   background: var(--bg);
 }
 
@@ -819,7 +820,8 @@ select:disabled {
   padding: 10px 6px;
   text-align: center;
   border-bottom: 1px solid var(--border);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .scanner-table td {
@@ -828,6 +830,7 @@ select:disabled {
   border-bottom: 1px solid rgba(30, 39, 48, 0.5);
   color: var(--text);
   transition: background 0.2s ease;
+  overflow-wrap: break-word;
 }
 
 .scanner-table tbody tr {
@@ -3276,20 +3279,66 @@ body.light-theme .pt-live-badge {
 
   .scanner-table-body {
     position: relative;
-    overflow-x: auto !important;
+    overflow-x: hidden !important;
     overflow-y: auto;
     max-width: 100%;
     -webkit-overflow-scrolling: touch;
   }
 
   .scanner-table {
-    width: max-content !important;
-    min-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 9px !important;
   }
 
   .scanner-table th,
   .scanner-table td {
-    white-space: nowrap !important;
+    white-space: normal !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    padding: 6px 3px !important;
+  }
+
+  /* Tighten the two-line label spacing so wrapped headers stay compact */
+  .scanner-table th {
+    letter-spacing: 0.2px;
+    line-height: 1.15;
+  }
+}
+
+/* ── Small phones (~375px): shrink-to-fit so all 8 columns stay whole ──
+   Flatten every inline font size to a single tiny size, minimise padding,
+   and stack the buy/sell strikes vertically to reclaim the widest column. */
+@media (max-width: 480px) {
+  .scanner-table {
+    font-size: 8px !important;
+  }
+
+  .scanner-table th,
+  .scanner-table td {
+    padding: 4px 2px !important;
+  }
+
+  /* Override the per-cell inline font sizes (10px muted text, etc.) so the
+     whole table renders at one compact size and numbers don't get clipped. */
+  .scanner-table th,
+  .scanner-table td,
+  .scanner-table td div,
+  .scanner-table td span,
+  .scanner-table th div {
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Buy strike over sell strike instead of "buy / sell" inline */
+  .scanner-strike-pair {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+
+  .scanner-strike-sep {
+    display: none;
   }
 }
 
