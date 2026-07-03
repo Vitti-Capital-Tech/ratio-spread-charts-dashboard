@@ -1303,7 +1303,6 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 .watch-card-head {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
 .watch-card-id {
@@ -1359,7 +1358,6 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 .watch-card-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px 12px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
@@ -1367,7 +1365,6 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 .watch-metric {
   display: flex;
   flex-direction: column;
-  gap: 2px;
   min-width: 0;
   overflow: hidden;
 }
@@ -1408,6 +1405,28 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 .watch-card-alerts .watch-alert-pill {
   width: auto;
   max-width: 100%;
+}
+
+/* Desktop: pack metrics as inline label+value chips that flow and wrap,
+   instead of a 4-column grid that spreads numbers far apart. */
+@media (min-width: 901px) {
+  .watch-card-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 18px;
+    row-gap: 9px;
+  }
+
+  .watch-metric {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    overflow: visible;
+  }
+
+  .watch-metric-val.split {
+    gap: 5px;
+  }
 }
 
 /* Narrow screens: stack the combined call|put values and ease column pressure */
@@ -3675,11 +3694,6 @@ body.light-theme .pt-live-badge {
 
   .config-actions {
     padding: 12px 16px;
-  }
-
-  .scan-btn {
-    width: 100%;
-    justify-content: center;
   }
 
   /* Collapsible filter body on mobile */

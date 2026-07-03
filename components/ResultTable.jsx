@@ -138,13 +138,13 @@ export default function ResultTable({
               </tr>
               <tr className="scanner-col-head">
                 <th>Spread Strikes</th>
-                <th>Premium (L/S)</th>
-                <th>Ratio (L/S)</th>
-                <th>Net Premium · IV Edge</th>
-                <th className="hide-mobile">Delta (L/S)</th>
-                <th className="atm-col atm-col-l">ATM Fair Value</th>
-                <th className="atm-col">ATM Edge (P&L)</th>
-                <th className="atm-col atm-col-r">Margin Req.</th>
+                <th><div>Premium</div><div> (L/S)</div></th>
+                <th><div>Ratio</div><div> (L/S)</div></th>
+                <th><div>Net</div><div>Premium</div></th>
+                <th className="hide-mobile"><div>Delta</div><div> (L/S)</div></th>
+                <th className="atm-col atm-col-l">ATM</th>
+                <th className="atm-col"><div>ATM</div><div>(P&L)</div></th>
+                <th className="atm-col atm-col-r">Margin</th>
               </tr>
             </thead>
             <tbody>
@@ -325,7 +325,7 @@ export default function ResultTable({
                             ${Math.abs(parseFloat(bestRow.netPremium))}
                           </div>
                           <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                            {bestRow.ivDiff.toFixed(1)}% IV
+                            {bestRow.ivDiff.toFixed(1)}%
                           </div>
                         </td>
                         <td className="hide-mobile">
@@ -405,7 +405,7 @@ export default function ResultTable({
                                 ${Math.abs(parseFloat(r.netPremium))}
                               </div>
                               <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                                {r.ivDiff.toFixed(1)}% IV
+                                {r.ivDiff.toFixed(1)}%
                               </div>
                             </td>
                             <td className="hide-mobile">
