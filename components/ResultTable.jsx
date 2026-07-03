@@ -138,9 +138,9 @@ export default function ResultTable({
               </tr>
               <tr className="scanner-col-head">
                 <th>Spread Strikes</th>
-                <th><div>Premium</div><div> (L/S)</div></th>
+                <th><div>Prem.</div><div> (L/S)</div></th>
                 <th><div>Ratio</div><div> (L/S)</div></th>
-                <th><div>Net</div><div>Premium</div></th>
+                <th><div>Net</div><div>Prem.</div></th>
                 <th><div>Delta</div><div> (L/S)</div></th>
                 <th className="atm-col atm-col-l">ATM</th>
                 <th className="atm-col"><div>ATM</div><div>(P&L)</div></th>
@@ -307,8 +307,9 @@ export default function ResultTable({
                           </div>
                         </td>
                         <td style={{ fontWeight: 700 }}>
-                          <div>
-                            <span className='scanner-buy'>{bestRow.buyLeg.lotSize.toFixed(2)}</span>/
+                          <div className="scanner-strike-pair">
+                            <span className='scanner-buy'>{bestRow.buyLeg.lotSize.toFixed(2)}</span>
+                            <span className="scanner-strike-sep">/</span>
                             <span className='scanner-sell'>{bestRow.sellQty.toFixed(2)}</span>
                           </div>
                           {bestRow.originalSellQty !== undefined && bestRow.originalLotSize !== undefined && (
@@ -329,8 +330,9 @@ export default function ResultTable({
                           </div>
                         </td>
                         <td>
-                          <div>
-                            <span className='scanner-buy'>{bestRow.buyLeg.lotSize}</span>/
+                          <div className="scanner-strike-pair">
+                            <span className='scanner-buy'>{bestRow.buyLeg.lotSize}</span>
+                            <span className="scanner-strike-sep">/</span>
                             <span className='scanner-sell'>{bestRow.sellLeg.delta?.toFixed(4)}</span>
                           </div>
                           <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
@@ -358,7 +360,8 @@ export default function ResultTable({
                           ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                         </td>
                         <td className="atm-cell atm-cell-r" style={{ fontWeight: 700 }}>
-                          ${bestRow.margin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <span className="margin-full">${bestRow.margin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="margin-compact">${Math.round(bestRow.margin).toLocaleString()}</span>
                         </td>
                       </tr>
 
@@ -387,8 +390,9 @@ export default function ResultTable({
                               </div>
                             </td>
                             <td style={{ fontWeight: 700 }}>
-                              <div>
-                                <span className='scanner-buy'>{r.buyLeg.lotSize.toFixed(2)}</span>/
+                              <div className="scanner-strike-pair">
+                                <span className='scanner-buy'>{r.buyLeg.lotSize.toFixed(2)}</span>
+                                <span className="scanner-strike-sep">/</span>
                                 <span className='scanner-sell'>{r.sellQty.toFixed(2)}</span>
                               </div>
                               {r.originalSellQty !== undefined && r.originalLotSize !== undefined && (
@@ -409,8 +413,9 @@ export default function ResultTable({
                               </div>
                             </td>
                             <td>
-                              <div>
-                                <span className='scanner-buy'>{r.buyLeg.lotSize}</span>/
+                              <div className="scanner-strike-pair">
+                                <span className='scanner-buy'>{r.buyLeg.lotSize}</span>
+                                <span className="scanner-strike-sep">/</span>
                                 <span className='scanner-sell'>{r.sellLeg.delta?.toFixed(4)}</span>
                               </div>
                               <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
@@ -438,7 +443,8 @@ export default function ResultTable({
                               ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                             </td>
                             <td className="atm-cell atm-cell-r" style={{ fontWeight: 700 }}>
-                              ${r.margin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              <span className="margin-full">${r.margin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              <span className="margin-compact">${Math.round(r.margin).toLocaleString()}</span>
                             </td>
                           </tr>
                         );

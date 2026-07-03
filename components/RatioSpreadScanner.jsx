@@ -70,7 +70,20 @@ export default function RatioSpreadScanner({ onNavigate, theme, toggleTheme, set
 
   const [activeTableTab, setActiveTableTab] = useState('call');
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
-  useEffect(() => { setIsFiltersCollapsed(window.innerWidth <= 900); }, []);
+  useEffect(() => {
+    // Auto-collapse the filters when the viewport is too narrow OR too short
+    // to leave room for the result tables (e.g. 1024×600 kiosk displays).
+    // One-directional: we only force-collapse, so the user can still expand
+    // manually; it re-collapses only if a later resize is again constrained.
+    const collapseIfConstrained = () => {
+      if (window.innerWidth <= 900 || window.innerHeight <= 760) {
+        setIsFiltersCollapsed(true);
+      }
+    };
+    collapseIfConstrained();
+    window.addEventListener('resize', collapseIfConstrained);
+    return () => window.removeEventListener('resize', collapseIfConstrained);
+  }, []);
 
   useEffect(() => {
     if (setNavbarProps) {

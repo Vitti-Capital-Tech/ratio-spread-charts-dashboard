@@ -766,6 +766,12 @@ select:disabled {
   box-shadow: inset -1px 0 0 rgba(240, 185, 11, 0.14);
 }
 
+/* Margin shows full precision by default; a decimal-free variant swaps in on
+   small phones (see ≤480px block) so the value never clips at the edge. */
+.margin-compact {
+  display: none;
+}
+
 .scanner-row-best td.atm-cell {
   background: rgba(240, 185, 11, 0.06);
 }
@@ -3316,7 +3322,7 @@ body.light-theme .pt-live-badge {
 
   .scanner-table th,
   .scanner-table td {
-    padding: 4px 2px !important;
+    padding: 4px 1px !important;
   }
 
   /* Override the per-cell inline font sizes (10px muted text, etc.) so the
@@ -3339,6 +3345,15 @@ body.light-theme .pt-live-badge {
 
   .scanner-strike-sep {
     display: none;
+  }
+
+  /* Drop the cents from Margin so the last column never gets clipped */
+  .margin-full {
+    display: none !important;
+  }
+
+  .margin-compact {
+    display: inline !important;
   }
 }
 
@@ -3783,6 +3798,48 @@ body.light-theme .pt-live-badge {
   .config-foot .foot-setups {
     margin-left: 0;
     width: 100%;
+  }
+}
+
+/* ── Short viewports (e.g. 1024×600 kiosk/landscape): reclaim vertical space
+   so the result tables get room. Filters auto-collapse (JS) and the always-
+   visible bar chrome compacts. Works at any width, incl. wide-but-short. */
+@media (max-height: 760px) {
+  /* Expose the collapse toggle even on wide screens when height is the limit */
+  .scanner-filters-toggle-btn {
+    display: inline-flex;
+  }
+
+  .config-top {
+    padding: 8px 20px;
+  }
+
+  .config-actions {
+    padding: 8px 20px;
+  }
+
+  .config-foot {
+    padding: 6px 20px;
+  }
+
+  .config-body {
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+  }
+
+  /* Collapsed: fully hide the filter body to free height for the tables */
+  .config-body.collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-color: transparent;
+  }
+
+  /* Expanded manually: cap height + scroll so filters never bury the tables */
+  .config-body.expanded {
+    max-height: 40vh;
+    overflow-y: auto;
   }
 }
 
