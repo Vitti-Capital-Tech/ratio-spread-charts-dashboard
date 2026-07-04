@@ -18,6 +18,10 @@ const UNDERLYINGS = ['BTC', 'ETH'];
 const TF_LIST = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w'];
 const CANDLE_COUNT = 300;
 
+// Collision-proof id — Date.now() alone repeats when two are created in the
+// same millisecond (e.g. adding alerts quickly), causing duplicate React keys.
+const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
 const playAlertSound = () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -800,7 +804,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
     if (legType !== 'call' && !putSym) { setErrMsg('Select valid put strike.'); return; }
     setErrMsg('');
 
-    const id = Date.now().toString();
+    const id = uid();
     const item = {
       id,
       type: legType,
@@ -902,6 +906,11 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   }, [wsStatus, activeCall, activePut, setNavbarProps]);
 
   const [alertLogs, setAlertLogs] = useState([]);
+  const [alertDrawerOpen, setAlertDrawerOpen] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+  // Per-watch-card "new alert" draft state ({ [itemId]: { dir, price } }).
+  // Replaces the old hidden-DOM-input approach so the ≥/≤ selector is controlled.
+  const [cardAlertDrafts, setCardAlertDrafts] = useState({});
 
   const triggeredAlerts = useRef(new Set());
   const [toasts, setToasts] = useState([]);
@@ -912,10 +921,11 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
     if (type === 'alert') {
       setAlertLogs(prev => [{
-        id: Date.now(),
+        id: uid(),
         time: new Date().toLocaleTimeString(),
         msg
       }, ...prev].slice(0, 50));
+      setUnreadAlerts(n => n + 1);
     }
 
     setTimeout(() => {
@@ -1725,31 +1735,6 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             </div>
           </div>
 
-          {/* Alert History card */}
-          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 250 }}>
-            <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-              <span>SIGNAL LOG</span>
-              <span onClick={() => setAlertLogs([])} style={{ fontSize: 9, cursor: 'pointer', opacity: 0.6, letterSpacing: 1, textTransform: 'uppercase' }}>Clear All</span>
-            </div>
-            <div className="trade-list" style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
-              {!alertLogs.length && <div style={{ textAlign: 'center', padding: 20, color: '#484f58', fontSize: 11 }}>No signals fired yet. Set a price alert to get started.</div>}
-              {alertLogs.map(log => (
-                <div key={log.id} style={{
-                  padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 11,
-                  display: 'flex', flexDirection: 'column', gap: 2
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e3b341', fontWeight: 800, fontSize: 10 }}>
-                      <Bell size={10} strokeWidth={3} />
-                      TRIGGERED
-                    </div>
-                    <span style={{ color: '#7d8590', fontSize: 10 }}>{log.time}</span>
-                  </div>
-                  <div style={{ color: theme === 'dark' ? '#e6edf3' : '#1e2329', lineHeight: 1.4 }}>{log.msg}</div>
-                </div>
-              ))}
-            </div>
-          </div>
         </aside>
 
         {/* Chart area — charts ALWAYS mounted, overlay sits on top */}
@@ -1758,6 +1743,26 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
           <div style={{ fontFamily: 'JetBrains Mono', fontSize: 16, fontWeight: 700, color: theme === 'dark' ? '#e6edf3' : '#1e2730', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Spot</span>
             <span style={{ color: '#e3b341', marginLeft: 2 }}>{spotPrice ? spotPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
+
+            <button
+              type="button"
+              title="Alert signal log"
+              onClick={() => { setAlertDrawerOpen(true); setUnreadAlerts(0); }}
+              style={{
+                marginLeft: 'auto', position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 34, height: 34, borderRadius: 8, cursor: 'pointer',
+                background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)'
+              }}
+            >
+              <Bell size={16} strokeWidth={2} />
+              {unreadAlerts > 0 && (
+                <span style={{
+                  position: 'absolute', top: -5, right: -5, minWidth: 16, height: 16, padding: '0 4px',
+                  borderRadius: 8, background: '#f85149', color: '#fff', fontSize: 9, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1
+                }}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</span>
+              )}
+            </button>
           </div>
 
           <div className="watchlist-container" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', overflowX: 'auto', paddingBottom: 8, minHeight: 80, maxHeight: '35vh', zIndex: 11 }}>
@@ -1897,88 +1902,86 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                       {greek('IV %', 'iv', 1, 'var(--comb)', true)}
                     </div>
 
-                    <div className="watch-card-alerts" onClick={e => e.stopPropagation()}>
-                      {/* Alerts Section */}
-                      <div className="watch-alert-pill" style={{ height: 'auto', minHeight: 32, padding: '4px 8px' }}>
-                        <div className="watch-alert-icon-wrap" style={{ alignSelf: 'flex-start', marginTop: 8 }}>
+                    <div className="watch-card-alerts" onClick={e => e.stopPropagation()} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                      {/* Alert input — compact box, sized to its controls */}
+                      <div className="watch-alert-pill" style={{ height: 'auto', minHeight: 32, padding: '4px 8px', width: 'auto', alignSelf: 'flex-start' }}>
+                        <div className="watch-alert-icon-wrap">
                           <Bell size={14} strokeWidth={2.2} color="#e3b341" />
                         </div>
 
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {(item.alerts || []).map(a => (
-                              <div key={a.id} style={{
-                                display: 'flex', alignItems: 'center', gap: 6, background: theme === 'dark' ? '#161b22' : 'var(--bg3)', border: '1px solid var(--border)',
-                                padding: '2px 8px', borderRadius: 4, fontSize: 10, color: a.dir === '>=' ? '#3fb950' : '#f85149', fontWeight: 700
-                              }}>
-                                {a.dir} {parseFloat(a.price).toFixed(2)}
-                                <div
-                                  onClick={() => {
-                                    setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: w.alerts.filter(x => x.id !== a.id) } : w));
-                                  }}
-                                  style={{ cursor: 'pointer', opacity: 0.6, marginLeft: 4, display: 'flex', alignItems: 'center' }}
-                                  className="alert-delete-icon"
-                                >
-                                  <X size={14} strokeWidth={2.5} />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="watch-alert-inputs" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <input type="hidden" id={`dir-${item.id}`} defaultValue=">=" />
-                            <CustomSelect
-                              variant="inline"
-                              value={item.alerts?.length > 0 ? '>=' : '>='} // default, managed externally anyway
-                              onChange={val => {
-                                // Keep UI updated since it's an uncontrolled list state
-                                const selEl = document.getElementById(`dir-${item.id}`);
-                                if (selEl) selEl.value = val;
-                              }}
-                              style={{
-                                color: '#3fb950',
-                                fontWeight: 700
-                              }}
-                              options={[
-                                { label: '≥', value: '>=' },
-                                { label: '≤', value: '<=' }
-                              ]}
-                            />
-                            <CustomInput
-                              type="number"
-                              placeholder="Price"
-                              id={`price-${item.id}`}
-                              style={{ background: 'transparent', border: 'none', color: theme === 'dark' ? '#e6edf3' : '#1e2329', width: 50, fontSize: 10, fontFamily: 'JetBrains Mono', outline: 'none', boxShadow: 'none' }}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  const dir = document.getElementById(`dir-${item.id}`).value;
-                                  const price = e.target.value;
-                                  if (price) {
-                                    setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: [...(w.alerts || []), { id: Date.now(), dir, price }] } : w));
-                                    e.target.value = '';
-                                    addToast(`Alert set: ${dir} ${price}`, 'info');
-                                  }
+                        <div className="watch-alert-inputs" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <button
+                            type="button"
+                            title="Toggle ≥ / ≤"
+                            onClick={() => setCardAlertDrafts(prev => {
+                              const cur = prev[item.id]?.dir || '>=';
+                              return { ...prev, [item.id]: { dir: cur === '>=' ? '<=' : '>=', price: prev[item.id]?.price || '' } };
+                            })}
+                            style={{
+                              minWidth: 22, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              background: (cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? 'rgba(63,185,80,0.15)' : 'rgba(248,81,73,0.15)',
+                              border: `1px solid ${(cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? 'rgba(63,185,80,0.4)' : 'rgba(248,81,73,0.4)'}`,
+                              color: (cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? '#3fb950' : '#f85149',
+                              fontWeight: 700, fontSize: 13, borderRadius: 4, cursor: 'pointer', padding: '0 4px', lineHeight: 1
+                            }}
+                          >
+                            {(cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? '≥' : '≤'}
+                          </button>
+                          <CustomInput
+                            type="number"
+                            placeholder="Price"
+                            value={cardAlertDrafts[item.id]?.price || ''}
+                            onChange={e => { const v = e.target.value; setCardAlertDrafts(prev => ({ ...prev, [item.id]: { dir: prev[item.id]?.dir || '>=', price: v } })); }}
+                            style={{ background: 'transparent', border: 'none', color: theme === 'dark' ? '#e6edf3' : '#1e2329', width: 50, fontSize: 10, fontFamily: 'JetBrains Mono', outline: 'none', boxShadow: 'none' }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                const d = cardAlertDrafts[item.id] || { dir: '>=', price: '' };
+                                if (d.price) {
+                                  setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: [...(w.alerts || []), { id: uid(), dir: d.dir, price: d.price }] } : w));
+                                  setCardAlertDrafts(prev => ({ ...prev, [item.id]: { dir: d.dir, price: '' } }));
+                                  addToast(`Alert set: ${d.dir} ${d.price}`, 'info');
                                 }
-                              }}
-                            />
-                            <button
-                              onClick={() => {
-                                const dir = document.getElementById(`dir-${item.id}`).value;
-                                const input = document.getElementById(`price-${item.id}`);
-                                const price = input.value;
-                                if (price) {
-                                  setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: [...(w.alerts || []), { id: Date.now(), dir, price }] } : w));
-                                  input.value = '';
-                                  addToast(`Alert set: ${dir} ${price}`, 'info');
-                                }
-                              }}
-                              style={{ background: 'rgba(56, 139, 253, 0.1)', border: '1px solid rgba(56, 139, 253, 0.3)', color: '#58a6ff', padding: '0 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
-                            >
-                              ADD
-                            </button>
-                          </div>
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              const d = cardAlertDrafts[item.id] || { dir: '>=', price: '' };
+                              if (d.price) {
+                                setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: [...(w.alerts || []), { id: uid(), dir: d.dir, price: d.price }] } : w));
+                                setCardAlertDrafts(prev => ({ ...prev, [item.id]: { dir: d.dir, price: '' } }));
+                                addToast(`Alert set: ${d.dir} ${d.price}`, 'info');
+                              }
+                            }}
+                            style={{ background: 'rgba(56, 139, 253, 0.1)', border: '1px solid rgba(56, 139, 253, 0.3)', color: '#58a6ff', padding: '0 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            ADD
+                          </button>
                         </div>
                       </div>
+
+                      {/* Active alerts — listed below the input, outside the box */}
+                      {item.alerts?.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {item.alerts.map(a => (
+                            <div key={a.id} style={{
+                              display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', background: theme === 'dark' ? '#161b22' : 'var(--bg3)', border: '1px solid var(--border)',
+                              padding: '2px 8px', borderRadius: 4, fontSize: 10, color: a.dir === '>=' ? '#3fb950' : '#f85149', fontWeight: 700
+                            }}>
+                              {a.dir} {parseFloat(a.price).toFixed(2)}
+                              <div
+                                onClick={() => {
+                                  setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: w.alerts.filter(x => x.id !== a.id) } : w));
+                                }}
+                                style={{ cursor: 'pointer', opacity: 0.6, marginLeft: 4, display: 'flex', alignItems: 'center' }}
+                                className="alert-delete-icon"
+                              >
+                                <X size={14} strokeWidth={2.5} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -2024,7 +2027,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             iconColor="#e3b341"
             alerts={watchList.find(w => w.id === selectedWatchId)?.alerts || []}
             onAddAlert={(dir, price) => {
-              const id = Date.now();
+              const id = uid();
               setWatchList(prev => prev.map(w => w.id === selectedWatchId ? { ...w, alerts: [...(w.alerts || []), { id, dir, price }] } : w));
               addToast(`Alert set: ${dir} ${price}`, 'info');
             }}
@@ -2035,6 +2038,53 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             showIvPut={true}
             theme={theme}
           />
+
+          {/* Alert Signal Log — right drawer, opened from the header bell */}
+          {alertDrawerOpen && (
+            <div
+              onClick={() => setAlertDrawerOpen(false)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 40 }}
+            />
+          )}
+          <aside
+            style={{
+              position: 'absolute', top: 0, right: 0, height: '100%', width: 340, maxWidth: '90%',
+              background: 'var(--bg2)', borderLeft: '1px solid var(--border)', zIndex: 41,
+              display: 'flex', flexDirection: 'column',
+              transform: alertDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
+              transition: 'transform 0.25s ease', boxShadow: '-8px 0 24px rgba(0,0,0,0.25)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text)' }}>
+                <Bell size={14} strokeWidth={2.5} /> Signal Log
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span onClick={() => setAlertLogs([])} style={{ fontSize: 9, cursor: 'pointer', opacity: 0.6, letterSpacing: 1, textTransform: 'uppercase' }}>Clear All</span>
+                <div onClick={() => setAlertDrawerOpen(false)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: 0.7 }}>
+                  <X size={16} strokeWidth={2.5} />
+                </div>
+              </div>
+            </div>
+            <div className="trade-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px' }}>
+              {!alertLogs.length && <div style={{ textAlign: 'center', padding: 20, color: '#484f58', fontSize: 11 }}>No signals fired yet. Set a price alert to get started.</div>}
+              {alertLogs.map(log => (
+                <div key={log.id} style={{
+                  padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 11,
+                  display: 'flex', flexDirection: 'column', gap: 2
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e3b341', fontWeight: 800, fontSize: 10 }}>
+                      <Bell size={10} strokeWidth={3} />
+                      TRIGGERED
+                    </div>
+                    <span style={{ color: '#7d8590', fontSize: 10 }}>{log.time}</span>
+                  </div>
+                  <div style={{ color: theme === 'dark' ? '#e6edf3' : '#1e2329', lineHeight: 1.4 }}>{log.msg}</div>
+                </div>
+              ))}
+            </div>
+          </aside>
         </main>
       </div>
     </div>
