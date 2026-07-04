@@ -1151,23 +1151,6 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 }
 
 /* ── Watchlist UI ────────────────────────────────────── */
-.watchlist-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.watchlist-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.watchlist-container::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-
-.watchlist-container::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
-}
-
 .watch-item {
   display: flex;
   align-items: center;
@@ -1256,6 +1239,7 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 }
 
 .watch-item-title .badge,
+.strategy-chip .badge,
 .watch-card-instrument .badge {
   display: inline-block;
   padding: 2px 6px;
@@ -1280,6 +1264,192 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
 .badge.put {
   background: rgba(248, 81, 73, 0.15);
   color: var(--put);
+}
+
+/* ── Strategy switcher — chip strip that replaces the stacked watch cards ── */
+.strategy-switcher {
+  scrollbar-width: none;
+}
+.strategy-switcher::-webkit-scrollbar { display: none; }
+
+.strategy-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.15s, background 0.15s;
+}
+.strategy-chip:hover { border-color: rgba(255, 255, 255, 0.18); }
+.strategy-chip.on {
+  border-color: rgba(47, 129, 247, 0.6);
+  background: rgba(47, 129, 247, 0.1);
+  box-shadow: 0 0 0 1px rgba(47, 129, 247, 0.3);
+}
+.strategy-chip .badge { margin-right: 0; }
+.strategy-chip-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.strategy-chip-live {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.strategy-chip-x {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-dim);
+  opacity: 0.55;
+  border-radius: 4px;
+  transition: opacity 0.15s, color 0.15s;
+}
+.strategy-chip-x:hover { opacity: 1; color: var(--put); }
+
+/* Mobile: keep the switcher pinned so you can swap charts without scrolling */
+@media (max-width: 900px) {
+  .strategy-switcher {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    background: var(--bg);
+    padding-top: 4px;
+  }
+}
+
+/* ── Chart context bar — selected strategy premiums / greeks / alerts ── */
+.chart-context-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg2);
+}
+.ctx-id { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ctx-id .badge { margin-right: 0; }
+.ctx-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap;
+}
+.ctx-exp { font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px; white-space: nowrap; }
+
+.ctx-scroll {
+  display: flex; align-items: center; gap: 16px;
+  flex: 1; min-width: 0;
+  overflow-x: auto; scrollbar-width: none;
+}
+.ctx-scroll::-webkit-scrollbar { display: none; }
+.ctx-stat { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+.ctx-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.ctx-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.ctx-val.g { color: var(--text); }
+.ctx-div { width: 1px; align-self: stretch; background: var(--border); flex-shrink: 0; margin: 2px 0; }
+
+.ctx-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ctx-alert-pills { display: flex; gap: 4px; max-width: 190px; overflow-x: auto; scrollbar-width: none; }
+.ctx-alert-pills::-webkit-scrollbar { display: none; }
+.ctx-alert-pill {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; white-space: nowrap;
+  border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+}
+.ctx-add-alert {
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer;
+  border: 1px solid rgba(227, 179, 65, 0.4); background: rgba(227, 179, 65, 0.1); color: var(--accent);
+  border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 700;
+  transition: background 0.15s;
+}
+.ctx-add-alert.on, .ctx-add-alert:hover { background: rgba(227, 179, 65, 0.18); }
+.ctx-alert-popover {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  display: flex; align-items: center; gap: 6px; padding: 8px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 900px) {
+  .chart-context-bar { flex-wrap: wrap; }
+  /* Stack the three groups on their own rows and let every stat wrap into
+     view instead of hiding in a horizontal scroll. */
+  .ctx-id { flex-basis: 100%; }
+  .ctx-scroll {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: 10px 18px;
+  }
+  .ctx-scroll .ctx-div { display: none; }
+  .ctx-actions { flex-basis: 100%; flex-wrap: wrap; }
+  .ctx-alert-popover { right: auto; left: 0; }
+}
+
+/* ── Collapsible builder rail (desktop only) ── */
+.sidebar { transition: width 0.2s ease; }
+.sidebar-rail-toggle { display: none; }
+
+@media (min-width: 901px) {
+  .sidebar-rail-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    align-self: flex-end;
+    padding: 5px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text-dim);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .sidebar-rail-toggle:hover { color: var(--accent); border-color: rgba(227, 179, 65, 0.4); }
+
+  .sidebar.rail-collapsed {
+    width: 46px;
+    min-width: 46px;
+    padding-left: 6px;
+    padding-right: 6px;
+    overflow: hidden;
+  }
+  .sidebar.rail-collapsed > :not(.sidebar-rail-toggle) { display: none !important; }
+  .sidebar.rail-collapsed .sidebar-rail-toggle {
+    align-self: stretch;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 4px;
+  }
+  .rail-vertical-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 2px;
+    font-size: 10px;
+  }
 }
 
 /* ── Watchlist card layout (compact, vertical, no horizontal scroll) ── */
@@ -2830,11 +3000,6 @@ body.light-theme .pt-live-badge {
   .chart-panel-container {
     min-height: 400px !important;
     height: 450px !important;
-  }
-
-  .watchlist-container {
-    max-height: none !important;
-    overflow-y: visible !important;
   }
 
   .watch-item {

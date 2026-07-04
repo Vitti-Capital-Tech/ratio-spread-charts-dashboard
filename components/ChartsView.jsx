@@ -69,7 +69,7 @@ const formatCombinedTitle = (callSym, putSym, priceType) => {
 // Exposes setData() and update() via ref.
 const ChartPanel = forwardRef(function ChartPanel({
   title, colorUp, colorDown, iconColor,
-  alerts = [], onAddAlert, onRemoveAlert,
+  alerts = [],
   showIvCall, showIvPut, theme, visible = true
 }, ref) {
   const containerRef = useRef(null);
@@ -88,7 +88,6 @@ const ChartPanel = forwardRef(function ChartPanel({
   const [drawMode, setDrawMode] = useState(false);
   const drawModeRef = useRef(false);
   const [drawnCount, setDrawnCount] = useState(0);
-  const [newAlert, setNewAlert] = useState({ price: '', dir: '>=' });
 
   const toggleDrawMode = () => {
     const next = !drawMode;
@@ -475,71 +474,6 @@ const ChartPanel = forwardRef(function ChartPanel({
             </button>
           </div>
 
-          <div style={{ width: 1, height: 14, background: 'var(--border)' }} />
-
-          {/* Multiple Alerts UI */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: theme === 'dark' ? '#161b22' : '#f0f2f5', padding: '2px 6px', borderRadius: 6, border: `1px solid ${theme === 'dark' ? '#30363d' : '#d1d5db'}` }}>
-              <CustomSelect
-                variant="inline"
-                value={newAlert.dir}
-                onChange={val => setNewAlert(prev => ({ ...prev, dir: val }))}
-                style={{
-                  color: newAlert.dir === '>=' ? '#3fb950' : '#f85149',
-                  fontWeight: 700
-                }}
-                options={[
-                  { label: '≥', value: '>=' },
-                  { label: '≤', value: '<=' }
-                ]}
-              />
-              <CustomInput
-                type="number"
-                placeholder="Alert Price"
-                value={newAlert.price}
-                onChange={e => setNewAlert(prev => ({ ...prev, price: e.target.value }))}
-                style={{ background: 'transparent', border: 'none', color: theme === 'dark' ? '#e6edf3' : '#1e2329', width: 70, fontSize: 11, fontFamily: 'JetBrains Mono', outline: 'none', boxShadow: 'none' }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newAlert.price) {
-                    onAddAlert(newAlert.dir, newAlert.price);
-                    setNewAlert(prev => ({ ...prev, price: '' }));
-                  }
-                }}
-              />
-              <button
-                onClick={() => {
-                  if (newAlert.price) {
-                    onAddAlert(newAlert.dir, newAlert.price);
-                    setNewAlert(prev => ({ ...prev, price: '' }));
-                  }
-                }}
-                disabled={!newAlert.price}
-                style={{ background: '#238636', border: 'none', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: 'pointer', opacity: newAlert.price ? 1 : 0.5 }}
-              >
-                SET ALERT
-              </button>
-            </div>
-
-            {/* Active Alerts List */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', maxWidth: 400, scrollbarWidth: 'none' }}>
-              {alerts.map(a => (
-                <div key={a.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 6, background: a.dir === '>=' ? 'rgba(63, 185, 80, 0.15)' : 'rgba(248, 81, 73, 0.15)',
-                  border: `1px solid ${a.dir === '>=' ? 'rgba(63, 185, 80, 0.3)' : 'rgba(248, 81, 73, 0.3)'}`,
-                  padding: '3px 8px', borderRadius: 4, fontSize: 10, color: a.dir === '>=' ? '#3fb950' : '#f85149', fontWeight: 700, flexShrink: 0
-                }}>
-                  {a.dir} {parseFloat(a.price).toFixed(2)}
-                  <div
-                    onClick={() => onRemoveAlert(a.id)}
-                    style={{ cursor: 'pointer', marginLeft: 6, display: 'flex', alignItems: 'center', opacity: 0.7 }}
-                    className="alert-delete-icon"
-                  >
-                    <X size={14} strokeWidth={2.5} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
       <div ref={containerRef} style={{ flex: 1, minHeight: 0, position: 'relative' }}>
@@ -696,6 +630,12 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
   const [listData, setListData] = useState({}); // Stores { price, high, low } per item ID
   const [selectedWatchId, setSelectedWatchId] = useState(null);
+
+  // Desktop builder rail: auto-collapse to a slim rail when a chart is active,
+  // handing the width to the chart. One-directional (only collapses) so the
+  // user can re-expand and it stays until they open another chart.
+  // Builder rail is fully user-controlled via the toggle (no auto-collapse).
+  const [railCollapsed, setRailCollapsed] = useState(false);
 
   // Mount effect: Load from localStorage
   useEffect(() => {
@@ -911,6 +851,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   // Per-watch-card "new alert" draft state ({ [itemId]: { dir, price } }).
   // Replaces the old hidden-DOM-input approach so the ≥/≤ selector is controlled.
   const [cardAlertDrafts, setCardAlertDrafts] = useState({});
+  const [alertPopoverOpen, setAlertPopoverOpen] = useState(false);
 
   const triggeredAlerts = useRef(new Set());
   const [toasts, setToasts] = useState([]);
@@ -1576,6 +1517,69 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
   const combPrice = (callPrice && putPrice) ? (callPrice + putPrice).toFixed(2) : '—';
 
+  // ── Rolling premium history for context-bar sparklines ───────────────
+  const premHistRef = useRef({ call: [], put: [], comb: [] });
+  useEffect(() => { premHistRef.current = { call: [], put: [], comb: [] }; }, [selectedWatchId, underlying]);
+  useEffect(() => {
+    const push = (arr, v) => { if (v == null || isNaN(v)) return; arr.push(v); if (arr.length > 40) arr.shift(); };
+    const h = premHistRef.current;
+    push(h.call, callPrice || null);
+    push(h.put, putPrice || null);
+    push(h.comb, (callPrice && putPrice) ? callPrice + putPrice : null);
+  }, [callPrice, putPrice]);
+
+  // Tiny inline sparkline from a value series
+  const spark = (data, color) => {
+    if (!data || data.length < 2) return <div style={{ height: 14 }} />;
+    const w = 46, h = 14;
+    const min = Math.min(...data), max = Math.max(...data);
+    const range = max - min || 1;
+    const pts = data.map((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - 1 - ((v - min) / range) * (h - 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return (
+      <svg width={w} height={h} style={{ display: 'block', marginTop: 2 }} aria-hidden="true">
+        <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.85" />
+      </svg>
+    );
+  };
+
+  // ── Selected strategy summary for the chart context bar ──────────────
+  const selectedItem = watchList.find(w => w.id === selectedWatchId) || null;
+  let selData = null, selGreeks = null;
+  if (selectedItem) {
+    const base = listData[selectedItem.id] || { price: 0, high: 0, low: Infinity };
+    let cp = 0, ch = 0, cl = Infinity, g = null;
+    if (selectedItem.type === 'combined') {
+      if (lastComb.current) { cp = lastComb.current.close; ch = lastComb.current.high; cl = lastComb.current.low; }
+      if (callGreeks && putGreeks) g = {
+        delta: callGreeks.delta + putGreeks.delta, gamma: callGreeks.gamma + putGreeks.gamma,
+        vega: callGreeks.vega + putGreeks.vega, theta: callGreeks.theta + putGreeks.theta,
+        iv: (callGreeks.iv + putGreeks.iv) / 2
+      };
+    } else if (selectedItem.type === 'call') {
+      if (lastC.current) { cp = lastC.current.close; ch = lastC.current.high; cl = lastC.current.low; }
+      g = callGreeks;
+    } else {
+      if (lastP.current) { cp = lastP.current.close; ch = lastP.current.high; cl = lastP.current.low; }
+      g = putGreeks;
+    }
+    selData = { price: cp > 0 ? cp : base.price, high: ch > 0 ? ch : base.high, low: cl < Infinity ? cl : base.low };
+    selGreeks = g || base.greeks || null;
+  }
+  // Candle direction (close vs open) → premium change arrow
+  const dirOf = (r) => (r?.current ? (r.current.close >= r.current.open ? 1 : -1) : 0);
+  const addSelAlert = () => {
+    if (!selectedItem) return;
+    const d = cardAlertDrafts[selectedItem.id] || { dir: '>=', price: '' };
+    if (!d.price) return;
+    setWatchList(prev => prev.map(w => w.id === selectedItem.id ? { ...w, alerts: [...(w.alerts || []), { id: uid(), dir: d.dir, price: d.price }] } : w));
+    setCardAlertDrafts(prev => ({ ...prev, [selectedItem.id]: { dir: d.dir, price: '' } }));
+    addToast(`Alert set: ${d.dir} ${d.price}`, 'info');
+  };
+
   return (
     <div className="app">
       {/* Toast Container */}
@@ -1602,7 +1606,17 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
       <div className="body">
         {/* Sidebar */}
-        <aside className="sidebar">
+        <aside className={`sidebar ${railCollapsed ? 'rail-collapsed' : ''}`}>
+          <button
+            type="button"
+            className="sidebar-rail-toggle"
+            onClick={() => setRailCollapsed(c => !c)}
+            title={railCollapsed ? 'Expand builder' : 'Collapse builder'}
+          >
+            {railCollapsed
+              ? <><ChevronsRight size={16} strokeWidth={2.5} /><span className="rail-vertical-label">BUILD</span></>
+              : <><ChevronLeft size={14} strokeWidth={2.5} /><span>Collapse</span></>}
+          </button>
           <div className="card" style={{ padding: '12px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isConfigCollapsed ? 0 : '10px' }}>
               <span className="card-title" style={{ margin: 0 }}>INSTRUMENT SETUP</span>
@@ -1719,22 +1733,6 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
           {errMsg && <div style={{ color: '#f85149', fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>{errMsg}</div>}
 
-          <div className="card">
-            <div className="card-title">LIVE PREMIUMS ({priceType === 'mark' ? 'Mark' : 'LTP'})</div>
-            <div className="stat-row">
-              <span className="stat-label">CALL Prem</span>
-              <span className="stat-val call">{callPrice ? callPrice.toFixed(2) : '—'}</span>
-            </div>
-            <div className="stat-row">
-              <span className="stat-label">PUT Prem</span>
-              <span className="stat-val put">{putPrice ? putPrice.toFixed(2) : '—'}</span>
-            </div>
-            <div className="stat-row">
-              <span className="stat-label">STRADDLE</span>
-              <span className="stat-val comb">{combPrice}</span>
-            </div>
-          </div>
-
         </aside>
 
         {/* Chart area — charts ALWAYS mounted, overlay sits on top */}
@@ -1765,229 +1763,152 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             </button>
           </div>
 
-          <div className="watchlist-container" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', overflowX: 'auto', paddingBottom: 8, minHeight: 80, maxHeight: '35vh', zIndex: 11 }}>
+          {/* Strategy switcher — compact selectable chips (replaces stacked cards) */}
+          <div className="strategy-switcher" style={{ flexShrink: 0, display: 'flex', gap: 8, overflowX: 'auto', overflowY: 'hidden', paddingBottom: 6, zIndex: 11 }}>
             {watchList.length === 0 ? (
-              <div style={{ color: 'var(--text-dim)', fontSize: 12, padding: 12, border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center' }}>
+              <div style={{ color: 'var(--text-dim)', fontSize: 12, padding: '10px 12px', border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center', width: '100%' }}>
                 No positions tracked. Build a strategy from the sidebar and click ADD TO WATCHLIST.
               </div>
             ) : (
               watchList.map(item => {
-                let data = listData[item.id] || { price: 0, high: 0, low: Infinity };
-                const isSelected = selectedWatchId === item.id;
-
-                if (isSelected) {
-                  let chartPrice = 0, chartHigh = 0, chartLow = Infinity;
-                  let chartGreeks = null;
-
-                  if (item.type === 'combined') {
-                    if (lastComb.current) {
-                      chartPrice = lastComb.current.close;
-                      chartHigh = lastComb.current.high;
-                      chartLow = lastComb.current.low;
-                    }
-                    if (callGreeks && putGreeks) {
-                      chartGreeks = {
-                        delta: callGreeks.delta + putGreeks.delta,
-                        gamma: callGreeks.gamma + putGreeks.gamma,
-                        vega: callGreeks.vega + putGreeks.vega,
-                        theta: callGreeks.theta + putGreeks.theta,
-                        rho: callGreeks.rho + putGreeks.rho,
-                        iv: (callGreeks.iv + putGreeks.iv) / 2,
-                        cDelta: callGreeks.delta, pDelta: putGreeks.delta,
-                        cGamma: callGreeks.gamma, pGamma: putGreeks.gamma,
-                        cVega: callGreeks.vega, pVega: putGreeks.vega,
-                        cTheta: callGreeks.theta, pTheta: putGreeks.theta,
-                        cRho: callGreeks.rho, pRho: putGreeks.rho,
-                        cIv: callGreeks.iv, pIv: putGreeks.iv
-                      };
-                    }
-                  } else if (item.type === 'call') {
-                    if (lastC.current) {
-                      chartPrice = lastC.current.close;
-                      chartHigh = lastC.current.high;
-                      chartLow = lastC.current.low;
-                    }
-                    chartGreeks = callGreeks;
-                  } else if (item.type === 'put') {
-                    if (lastP.current) {
-                      chartPrice = lastP.current.close;
-                      chartHigh = lastP.current.high;
-                      chartLow = lastP.current.low;
-                    }
-                    chartGreeks = putGreeks;
-                  }
-
-                  if (chartPrice > 0) {
-                    data = {
-                      ...data,
-                      price: chartPrice,
-                      high: chartHigh > 0 ? chartHigh : data.high,
-                      low: chartLow < Infinity ? chartLow : data.low,
-                      greeks: chartGreeks || data.greeks
-                    };
-                  }
-                }
-
-                const greek = (label, baseKey, decimals, color, pct = false) => {
-                  const cap = baseKey.charAt(0).toUpperCase() + baseKey.slice(1);
-                  const cv = data.greeks?.['c' + cap];
-                  const pv = data.greeks?.['p' + cap];
-                  const sv = data.greeks?.[baseKey];
-                  const f = (v) => (pct ? (v * 100).toFixed(1) + '%' : v.toFixed(decimals));
-                  const isComb = item.type === 'combined' && cv != null;
-                  return (
-                    <div className="watch-metric">
-                      <span className="watch-metric-label">{label}</span>
-                      {isComb ? (
-                        <span className="watch-metric-val split">
-                          <span style={{ color: 'var(--call)' }}>{f(cv)}</span>
-                          <span className="watch-metric-sep">|</span>
-                          <span style={{ color: 'var(--put)' }}>{f(pv)}</span>
-                        </span>
-                      ) : (
-                        <span className="watch-metric-val" style={{ color }}>{sv != null ? f(sv) : '—'}</span>
-                      )}
-                    </div>
-                  );
-                };
-
+                const d = listData[item.id] || { price: 0 };
+                const isSel = selectedWatchId === item.id;
+                const label = item.type === 'combined' ? `${item.callStrike}C+${item.putStrike}P` : item.type === 'call' ? `${item.callStrike}C` : `${item.putStrike}P`;
+                const badgeClass = item.type === 'combined' ? 'comb' : item.type;
+                const badgeText = item.type === 'combined' ? 'STRADDLE' : item.type.toUpperCase();
                 return (
-                  <div key={item.id} onClick={() => setSelectedWatchId(item.id)}
-                    className={`watch-card watch-item-${item.type} ${isSelected ? 'selected' : ''}`}
-                    style={{ backgroundColor: theme == 'dark' ? '' : isSelected ? '#b8f5f7' : '#e6edf3' }}>
-
-                    <div className="watch-card-head">
-                      <div className="watch-card-id">
-                        <span className="watch-card-instrument">
-                          {item.type === 'combined' ? (
-                            <><span className="badge comb">STRADDLE</span> {item.callStrike}C + {item.putStrike}P</>
-                          ) : item.type === 'call' ? (
-                            <><span className="badge call">CALL</span> {item.callStrike}C</>
-                          ) : (
-                            <><span className="badge put">PUT</span> {item.putStrike}P</>
-                          )}
-                        </span>
-                        <span className="watch-card-expiry">{fmtExpiry(item.expiry)}</span>
-                      </div>
-
-                      <div className="watch-card-live">
-                        <span className="watch-card-live-label">LIVE</span>
-                        <span className={`watch-card-live-val ${data.price > 0 ? 'highlight' : ''}`}>{data.price > 0 ? data.price.toFixed(2) : '—'}</span>
-                      </div>
-
-                      <button className="watch-delete-btn" title="Remove strategy" onClick={(e) => {
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedWatchId(item.id)}
+                    className={`strategy-chip ${isSel ? 'on' : ''}`}
+                    title={label}
+                  >
+                    <span className={`badge ${badgeClass}`}>{badgeText}</span>
+                    <span className="strategy-chip-label">{label}</span>
+                    <span className="strategy-chip-live">{d.price > 0 ? d.price.toFixed(2) : '—'}</span>
+                    <span
+                      className="strategy-chip-x"
+                      title="Remove strategy"
+                      onClick={(e) => {
                         e.stopPropagation();
                         setWatchList(prev => prev.filter(w => w.id !== item.id));
                         setListData(prev => { const next = { ...prev }; delete next[item.id]; return next; });
                         if (selectedWatchId === item.id) setSelectedWatchId(null);
-                      }}>
-                        <Trash2 size={14} strokeWidth={2} />
-                      </button>
-                    </div>
-
-                    <div className="watch-card-metrics">
-                      <div className="watch-metric">
-                        <span className="watch-metric-label">1H HIGH</span>
-                        <span className="watch-metric-val" style={{ color: 'var(--call)' }}>{data.high > 0 ? data.high.toFixed(2) : '—'}</span>
-                      </div>
-                      <div className="watch-metric">
-                        <span className="watch-metric-label">1H LOW</span>
-                        <span className="watch-metric-val" style={{ color: 'var(--put)' }}>{data.low < Infinity && data.low > 0 ? data.low.toFixed(2) : '—'}</span>
-                      </div>
-                      {greek('DELTA', 'delta', 4, 'var(--accent)')}
-                      {greek('GAMMA', 'gamma', 5, 'var(--accent)')}
-                      {greek('VEGA', 'vega', 2, 'var(--comb)')}
-                      {greek('THETA', 'theta', 2, '#ff7b72')}
-                      {greek('RHO', 'rho', 4, '#58a6ff')}
-                      {greek('IV %', 'iv', 1, 'var(--comb)', true)}
-                    </div>
-
-                    <div className="watch-card-alerts" onClick={e => e.stopPropagation()} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
-                      {/* Alert input — compact box, sized to its controls */}
-                      <div className="watch-alert-pill" style={{ height: 'auto', minHeight: 32, padding: '4px 8px', width: 'auto', alignSelf: 'flex-start' }}>
-                        <div className="watch-alert-icon-wrap">
-                          <Bell size={14} strokeWidth={2.2} color="#e3b341" />
-                        </div>
-
-                        <div className="watch-alert-inputs" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <button
-                            type="button"
-                            title="Toggle ≥ / ≤"
-                            onClick={() => setCardAlertDrafts(prev => {
-                              const cur = prev[item.id]?.dir || '>=';
-                              return { ...prev, [item.id]: { dir: cur === '>=' ? '<=' : '>=', price: prev[item.id]?.price || '' } };
-                            })}
-                            style={{
-                              minWidth: 22, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              background: (cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? 'rgba(63,185,80,0.15)' : 'rgba(248,81,73,0.15)',
-                              border: `1px solid ${(cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? 'rgba(63,185,80,0.4)' : 'rgba(248,81,73,0.4)'}`,
-                              color: (cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? '#3fb950' : '#f85149',
-                              fontWeight: 700, fontSize: 13, borderRadius: 4, cursor: 'pointer', padding: '0 4px', lineHeight: 1
-                            }}
-                          >
-                            {(cardAlertDrafts[item.id]?.dir || '>=') === '>=' ? '≥' : '≤'}
-                          </button>
-                          <CustomInput
-                            type="number"
-                            placeholder="Price"
-                            value={cardAlertDrafts[item.id]?.price || ''}
-                            onChange={e => { const v = e.target.value; setCardAlertDrafts(prev => ({ ...prev, [item.id]: { dir: prev[item.id]?.dir || '>=', price: v } })); }}
-                            style={{ background: 'transparent', border: 'none', color: theme === 'dark' ? '#e6edf3' : '#1e2329', width: 50, fontSize: 10, fontFamily: 'JetBrains Mono', outline: 'none', boxShadow: 'none' }}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') {
-                                const d = cardAlertDrafts[item.id] || { dir: '>=', price: '' };
-                                if (d.price) {
-                                  setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: [...(w.alerts || []), { id: uid(), dir: d.dir, price: d.price }] } : w));
-                                  setCardAlertDrafts(prev => ({ ...prev, [item.id]: { dir: d.dir, price: '' } }));
-                                  addToast(`Alert set: ${d.dir} ${d.price}`, 'info');
-                                }
-                              }
-                            }}
-                          />
-                          <button
-                            onClick={() => {
-                              const d = cardAlertDrafts[item.id] || { dir: '>=', price: '' };
-                              if (d.price) {
-                                setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: [...(w.alerts || []), { id: uid(), dir: d.dir, price: d.price }] } : w));
-                                setCardAlertDrafts(prev => ({ ...prev, [item.id]: { dir: d.dir, price: '' } }));
-                                addToast(`Alert set: ${d.dir} ${d.price}`, 'info');
-                              }
-                            }}
-                            style={{ background: 'rgba(56, 139, 253, 0.1)', border: '1px solid rgba(56, 139, 253, 0.3)', color: '#58a6ff', padding: '0 6px', borderRadius: 4, fontSize: 9, fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            ADD
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Active alerts — listed below the input, outside the box */}
-                      {item.alerts?.length > 0 && (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {item.alerts.map(a => (
-                            <div key={a.id} style={{
-                              display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', background: theme === 'dark' ? '#161b22' : 'var(--bg3)', border: '1px solid var(--border)',
-                              padding: '2px 8px', borderRadius: 4, fontSize: 10, color: a.dir === '>=' ? '#3fb950' : '#f85149', fontWeight: 700
-                            }}>
-                              {a.dir} {parseFloat(a.price).toFixed(2)}
-                              <div
-                                onClick={() => {
-                                  setWatchList(prev => prev.map(w => w.id === item.id ? { ...w, alerts: w.alerts.filter(x => x.id !== a.id) } : w));
-                                }}
-                                style={{ cursor: 'pointer', opacity: 0.6, marginLeft: 4, display: 'flex', alignItems: 'center' }}
-                                className="alert-delete-icon"
-                              >
-                                <X size={14} strokeWidth={2.5} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                      }}
+                    >
+                      <X size={13} strokeWidth={2.5} />
+                    </span>
+                  </button>
                 );
               })
             )}
           </div>
+
+          {/* Chart context bar — selected strategy's premiums, greeks & alerts */}
+          {selectedItem && (
+            <div className="chart-context-bar">
+              <div className="ctx-id">
+                <span className={`badge ${selectedItem.type === 'combined' ? 'comb' : selectedItem.type}`}>
+                  {selectedItem.type === 'combined' ? 'STRADDLE' : selectedItem.type.toUpperCase()}
+                </span>
+                <span className="ctx-name">
+                  {selectedItem.type === 'combined'
+                    ? `${selectedItem.callStrike}C + ${selectedItem.putStrike}P`
+                    : selectedItem.type === 'call' ? `${selectedItem.callStrike}C` : `${selectedItem.putStrike}P`}
+                </span>
+                <span className="ctx-exp">{fmtExpiry(selectedItem.expiry)}</span>
+              </div>
+
+              <div className="ctx-scroll">
+                {selectedItem.type === 'combined' && (
+                  <div className="ctx-stat">
+                    <span className="ctx-lbl">Straddle</span>
+                    <span className="ctx-val" style={{ color: combPrice === '—' ? 'var(--text-dim)' : dirOf(lastComb) >= 0 ? 'var(--call)' : 'var(--put)' }}>
+                      {combPrice}{combPrice !== '—' ? (dirOf(lastComb) >= 0 ? ' ▲' : ' ▼') : ''}
+                    </span>
+                    {spark(premHistRef.current.comb, dirOf(lastComb) >= 0 ? '#3fb950' : '#f85149')}
+                  </div>
+                )}
+                {selectedItem.type !== 'put' && (
+                  <div className="ctx-stat">
+                    <span className="ctx-lbl">Call</span>
+                    <span className="ctx-val" style={{ color: !callPrice ? 'var(--text-dim)' : dirOf(lastC) >= 0 ? 'var(--call)' : 'var(--put)' }}>
+                      {callPrice ? callPrice.toFixed(2) : '—'}{callPrice ? (dirOf(lastC) >= 0 ? ' ▲' : ' ▼') : ''}
+                    </span>
+                    {spark(premHistRef.current.call, dirOf(lastC) >= 0 ? '#3fb950' : '#f85149')}
+                  </div>
+                )}
+                {selectedItem.type !== 'call' && (
+                  <div className="ctx-stat">
+                    <span className="ctx-lbl">Put</span>
+                    <span className="ctx-val" style={{ color: !putPrice ? 'var(--text-dim)' : dirOf(lastP) >= 0 ? 'var(--call)' : 'var(--put)' }}>
+                      {putPrice ? putPrice.toFixed(2) : '—'}{putPrice ? (dirOf(lastP) >= 0 ? ' ▲' : ' ▼') : ''}
+                    </span>
+                    {spark(premHistRef.current.put, dirOf(lastP) >= 0 ? '#3fb950' : '#f85149')}
+                  </div>
+                )}
+
+                <span className="ctx-div" />
+
+                <div className="ctx-stat"><span className="ctx-lbl">1H Hi</span><span className="ctx-val" style={{ color: 'var(--call)' }}>{selData?.high > 0 ? selData.high.toFixed(2) : '—'}</span></div>
+                <div className="ctx-stat"><span className="ctx-lbl">1H Lo</span><span className="ctx-val" style={{ color: 'var(--put)' }}>{selData?.low < Infinity && selData?.low > 0 ? selData.low.toFixed(2) : '—'}</span></div>
+
+                <span className="ctx-div" />
+
+                <div className="ctx-stat"><span className="ctx-lbl">Delta</span><span className="ctx-val g">{selGreeks?.delta != null ? selGreeks.delta.toFixed(4) : '—'}</span></div>
+                <div className="ctx-stat"><span className="ctx-lbl">Gamma</span><span className="ctx-val g">{selGreeks?.gamma != null ? selGreeks.gamma.toFixed(5) : '—'}</span></div>
+                <div className="ctx-stat"><span className="ctx-lbl">Vega</span><span className="ctx-val g">{selGreeks?.vega != null ? selGreeks.vega.toFixed(2) : '—'}</span></div>
+                <div className="ctx-stat"><span className="ctx-lbl">Theta</span><span className="ctx-val g">{selGreeks?.theta != null ? selGreeks.theta.toFixed(2) : '—'}</span></div>
+                <div className="ctx-stat"><span className="ctx-lbl">IV</span><span className="ctx-val g">{selGreeks?.iv != null ? (selGreeks.iv * 100).toFixed(1) + '%' : '—'}</span></div>
+              </div>
+
+              <div className="ctx-actions">
+                {selectedItem.alerts?.length > 0 && (
+                  <div className="ctx-alert-pills">
+                    {selectedItem.alerts.map(a => (
+                      <span key={a.id} className="ctx-alert-pill" style={{ color: a.dir === '>=' ? 'var(--call)' : 'var(--put)', borderColor: a.dir === '>=' ? 'rgba(63,185,80,0.3)' : 'rgba(248,81,73,0.3)' }}>
+                        {a.dir} {parseFloat(a.price).toFixed(2)}
+                        <span className="alert-delete-icon" style={{ cursor: 'pointer', display: 'inline-flex', opacity: 0.6, marginLeft: 2 }}
+                          onClick={() => setWatchList(prev => prev.map(w => w.id === selectedItem.id ? { ...w, alerts: w.alerts.filter(x => x.id !== a.id) } : w))}>
+                          <X size={12} strokeWidth={2.5} />
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ position: 'relative' }}>
+                  <button type="button" className={`ctx-add-alert ${alertPopoverOpen ? 'on' : ''}`} onClick={() => setAlertPopoverOpen(o => !o)}>
+                    <Bell size={12} strokeWidth={2.5} /> Alert
+                  </button>
+                  {alertPopoverOpen && (
+                    <div className="ctx-alert-popover">
+                      <button type="button" title="Toggle ≥ / ≤"
+                        onClick={() => setCardAlertDrafts(prev => { const cur = prev[selectedItem.id]?.dir || '>='; return { ...prev, [selectedItem.id]: { dir: cur === '>=' ? '<=' : '>=', price: prev[selectedItem.id]?.price || '' } }; })}
+                        style={{
+                          minWidth: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          background: (cardAlertDrafts[selectedItem.id]?.dir || '>=') === '>=' ? 'rgba(63,185,80,0.15)' : 'rgba(248,81,73,0.15)',
+                          border: `1px solid ${(cardAlertDrafts[selectedItem.id]?.dir || '>=') === '>=' ? 'rgba(63,185,80,0.4)' : 'rgba(248,81,73,0.4)'}`,
+                          color: (cardAlertDrafts[selectedItem.id]?.dir || '>=') === '>=' ? '#3fb950' : '#f85149',
+                          fontWeight: 700, fontSize: 14, borderRadius: 6, cursor: 'pointer'
+                        }}>
+                        {(cardAlertDrafts[selectedItem.id]?.dir || '>=') === '>=' ? '≥' : '≤'}
+                      </button>
+                      <CustomInput type="number" placeholder="Alert price"
+                        value={cardAlertDrafts[selectedItem.id]?.price || ''}
+                        onChange={e => { const v = e.target.value; setCardAlertDrafts(prev => ({ ...prev, [selectedItem.id]: { dir: prev[selectedItem.id]?.dir || '>=', price: v } })); }}
+                        onKeyDown={e => { if (e.key === 'Enter') addSelAlert(); }}
+                        style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', width: 90, fontSize: 12, fontFamily: 'JetBrains Mono', borderRadius: 6, padding: '5px 8px' }} />
+                      <button type="button" onClick={addSelAlert}
+                        style={{ background: '#238636', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                        Add
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Idle/Loading overlay — rendered as a flex container taking remaining space */}
           {(phase === 'idle' || phase === 'loading') && (
@@ -2026,14 +1947,6 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             colorDown="#f85149"
             iconColor="#e3b341"
             alerts={watchList.find(w => w.id === selectedWatchId)?.alerts || []}
-            onAddAlert={(dir, price) => {
-              const id = uid();
-              setWatchList(prev => prev.map(w => w.id === selectedWatchId ? { ...w, alerts: [...(w.alerts || []), { id, dir, price }] } : w));
-              addToast(`Alert set: ${dir} ${price}`, 'info');
-            }}
-            onRemoveAlert={(id) => {
-              setWatchList(prev => prev.map(w => w.id === selectedWatchId ? { ...w, alerts: w.alerts.filter(a => a.id !== id) } : w));
-            }}
             showIvCall={true}
             showIvPut={true}
             theme={theme}
