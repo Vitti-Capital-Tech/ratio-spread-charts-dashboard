@@ -10,7 +10,7 @@ import {
   createWS, TF_SECS
 } from '../lib/api';
 import { useTabListener } from '../lib/useTabSync';
-import { Plus, X, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown, PenLine, Undo2, Trash2, ZoomIn, ZoomOut, Maximize2, Bell } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown, PenLine, Undo2, Trash2, ZoomIn, ZoomOut, Maximize2, Maximize, Minimize, Bell } from 'lucide-react';
 import CustomSelect from './common/CustomSelect';
 import CustomInput from './common/CustomInput';
 
@@ -88,6 +88,52 @@ const ChartPanel = forwardRef(function ChartPanel({
   const [drawMode, setDrawMode] = useState(false);
   const drawModeRef = useRef(false);
   const [drawnCount, setDrawnCount] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const panelRef = useRef(null);
+
+  // Fullscreen via the browser Fullscreen API — true fullscreen on mobile
+  // (a fixed overlay can be trapped by transformed ancestors). Falls back to
+  // a fixed-position overlay where the API is unavailable (e.g. iOS Safari).
+  const toggleFullscreen = () => {
+    const el = panelRef.current;
+    if (!el) { setFullscreen(f => !f); return; }
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    const active = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!fullscreen) {
+      if (req) Promise.resolve(req.call(el)).catch(() => setFullscreen(true));
+      else setFullscreen(true);
+    } else if (active && exit) {
+      Promise.resolve(exit.call(document)).catch(() => setFullscreen(false));
+    } else {
+      setFullscreen(false);
+    }
+  };
+
+  // Keep state synced when the browser exits fullscreen (system back / Esc).
+  useEffect(() => {
+    const onFs = () => setFullscreen(!!(document.fullscreenElement || document.webkitFullscreenElement));
+    document.addEventListener('fullscreenchange', onFs);
+    document.addEventListener('webkitfullscreenchange', onFs);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFs);
+      document.removeEventListener('webkitfullscreenchange', onFs);
+    };
+  }, []);
+
+  // Resize the chart to its new bounds whenever fullscreen toggles; Esc exits
+  // the CSS fallback (the API handles Esc natively).
+  useEffect(() => {
+    const el = containerRef.current, chart = chartRef.current;
+    if (!el || !chart) return;
+    const id = requestAnimationFrame(() => chart.applyOptions({ width: el.clientWidth, height: el.clientHeight }));
+    if (!fullscreen) return () => cancelAnimationFrame(id);
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !(document.fullscreenElement || document.webkitFullscreenElement)) setFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => { cancelAnimationFrame(id); window.removeEventListener('keydown', onKey); };
+  }, [fullscreen]);
 
   const toggleDrawMode = () => {
     const next = !drawMode;
@@ -424,7 +470,7 @@ const ChartPanel = forwardRef(function ChartPanel({
   }), []);
 
   return (
-    <div className="chart-panel-container" style={{
+    <div ref={panelRef} className={`chart-panel-container ${fullscreen ? 'chart-fullscreen' : ''}`} style={{
       flex: 1, display: visible ? 'flex' : 'none', flexDirection: 'column',
       border: '1px solid var(--border)', borderRadius: 8,
       overflow: 'hidden', minHeight: 0, background: 'var(--bg)'
@@ -496,7 +542,7 @@ const ChartPanel = forwardRef(function ChartPanel({
 
         {/* TradingView-style Tools */}
         <div style={{
-          position: 'absolute', bottom: 12, right: 12, zIndex: 10,
+          position: 'absolute', bottom: 40, right: 12, zIndex: 10,
           display: 'flex', gap: 4, background: theme === 'dark' ? 'rgba(10, 13, 18, 0.8)' : 'rgba(255, 255, 255, 0.8)', padding: 4,
           borderRadius: 8, border: '1px solid var(--border)', backdropFilter: 'blur(4px)'
         }}>
@@ -598,6 +644,10 @@ const ChartPanel = forwardRef(function ChartPanel({
             chartRef.current?.timeScale().fitContent();
           }}>
             <Maximize2 size={16} strokeWidth={2} />
+          </button>
+
+          <button title={fullscreen ? 'Exit Fullscreen (Esc)' : 'Fullscreen'} className="tv-btn" onClick={toggleFullscreen}>
+            {fullscreen ? <Minimize size={16} strokeWidth={2} /> : <Maximize size={16} strokeWidth={2} />}
           </button>
         </div>
       </div>

@@ -1402,6 +1402,27 @@ body.light-theme .scanner-logs-body::-webkit-scrollbar-thumb:hover {
   .ctx-alert-popover { right: auto; left: 0; }
 }
 
+/* ── Fullscreen chart (mobile + desktop) ── */
+/* Native Fullscreen API path */
+.chart-panel-container:fullscreen,
+.chart-panel-container:-webkit-full-screen {
+  background: var(--bg);
+  border: none !important;
+  border-radius: 0 !important;
+  width: 100vw;
+  height: 100vh;
+}
+/* Fallback overlay path (API unavailable, e.g. iOS Safari) */
+.chart-panel-container.chart-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  max-width: 100vw;
+  max-height: 100vh;
+}
+
 /* ── Collapsible builder rail (desktop only) ── */
 .sidebar { transition: width 0.2s ease; }
 .sidebar-rail-toggle { display: none; }
