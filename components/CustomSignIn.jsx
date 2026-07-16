@@ -56,14 +56,35 @@ export default function CustomSignIn() {
   }, [countdown]);
 
   const handleIdentifierSubmit = async (data) => {
-    const targetEmail = data.email.trim();
-    setEmail(targetEmail);
+    const input = data.email.trim();
     setError('');
     setLoading(true);
 
     try {
+      // OTP bypass: entering the secret access word (a non-email value) instead
+      // of an email signs in directly, skipping the OTP step entirely. The
+      // server validates the word against BYPASS_WORD; if it doesn't match the
+      // request is rejected and the user just sees "Invalid access word."
+      if (!input.includes('@')) {
+        const res = await fetch('/api/auth/otp-bypass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ word: input }),
+        });
+
+        if (!res.ok) throw new Error('Invalid access word.');
+
+        // Force authClient to refresh its session cache, then enter the portal.
+        await authClient.getSession();
+        window.location.href = '/charts';
+        return;
+      }
+
+      setEmail(input);
+
       const { error } = await authClient.emailOtp.sendVerificationOtp({
-        email: targetEmail,
+        email: input,
         type: 'sign-in',
       });
 
@@ -272,7 +293,13 @@ export default function CustomSignIn() {
                 autoFocus
                 {...register('email', {
                   required: 'Email address is required',
-                  pattern: { value: EMAIL_RE, message: 'Please enter a valid email address' }
+                  validate: (v) => {
+                    const t = (v || '').trim();
+                    if (EMAIL_RE.test(t)) return true;
+                    // Allow a non-email "access word" through to the bypass path.
+                    if (!t.includes('@') && /^\S{3,64}$/.test(t)) return true;
+                    return 'Please enter a valid email address';
+                  }
                 })}
               />
               {emailValid && !errors.email && (
