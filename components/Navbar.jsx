@@ -73,7 +73,7 @@ export default function Navbar({
             <CandlestickChart size={17} color="var(--accent)" style={{ flexShrink: 0 }} />
           </span>
           <span className="logo-wordmark">
-            <span className="logo-b1">VITTI</span>
+            <span className="logo-b1">JODI</span>
             <span className="logo-b2">Crypto Scanner</span>
           </span>
         </div>
@@ -184,7 +184,7 @@ export default function Navbar({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 18,
-            background: 'radial-gradient(ellipse at 50% 35%, rgba(240,185,11,0.05) 0%, transparent 60%), var(--bg)',
+            background: 'radial-gradient(ellipse at 50% 35%, rgba(47, 129, 247,0.05) 0%, transparent 60%), var(--bg)',
             WebkitBackdropFilter: 'blur(2px)',
             backdropFilter: 'blur(2px)',
           }}
@@ -192,13 +192,13 @@ export default function Navbar({
           <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
             <span className="brand-glyph" style={{
               width: 30, height: 30, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0,
-              background: 'linear-gradient(150deg, rgba(240,185,11,0.18), rgba(240,185,11,0.04))',
-              border: '1px solid rgba(240,185,11,0.28)'
+              background: 'linear-gradient(150deg, rgba(47, 129, 247,0.18), rgba(47, 129, 247,0.04))',
+              border: '1px solid rgba(47, 129, 247,0.28)'
             }}>
               <CandlestickChart size={18} color="var(--accent)" style={{ flexShrink: 0 }} />
             </span>
             <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: 1, color: 'var(--accent)' }}>
-              VITTI CRYPTO <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>SCANNER</span>
+              JODI CRYPTO <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>SCANNER</span>
             </span>
           </div>
           <span className="eq-bars" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 4, height: 28 }}>

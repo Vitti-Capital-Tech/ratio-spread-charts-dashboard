@@ -74,7 +74,7 @@ export default function ResultTable({
             <span className="scanner-match-badge">{results.length} match{results.length !== 1 ? 'es' : ''}</span>
           )}
           <div style={{ fontSize: 12 }}>
-            Spot: <strong style={{ color: '#e3b341' }}>{spotPrice?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            Spot: <strong style={{ color: '#2f81f7' }}>{spotPrice?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </div>
           {lastRefreshed > 0 && (
             <div className="hide-xs" style={{ fontSize: 12, color: 'var(--text)', borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
