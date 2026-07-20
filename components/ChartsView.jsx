@@ -207,7 +207,7 @@ const ChartPanel = forwardRef(function ChartPanel({
 
     if (showIvCall && showIvPut) {
       combIvRef.current = chart.addSeries(LineSeries, {
-        priceScaleId: 'ivScale', color: '#e3b341', lineWidth: 1.5, title: 'Comb IV', crosshairMarkerRadius: 3
+        priceScaleId: 'ivScale', color: '#2f81f7', lineWidth: 1.5, title: 'Comb IV', crosshairMarkerRadius: 3
       });
       ivScaleCreated = true;
     } else {
@@ -259,7 +259,7 @@ const ChartPanel = forwardRef(function ChartPanel({
         }
         if (combIvRef.current) {
           const combData = param.seriesData.get(combIvRef.current);
-          if (combData) ivHtml += `<span style="color:#e3b341;margin-left:8px;">Comb IV <span style="color:${valTextColor}">${(combData.value * 100).toFixed(1)}%</span></span>`;
+          if (combData) ivHtml += `<span style="color:#2f81f7;margin-left:8px;">Comb IV <span style="color:${valTextColor}">${(combData.value * 100).toFixed(1)}%</span></span>`;
         }
         legendRef.current.innerHTML = `
           <div style="display:flex;gap:12px;background:${legendBg};padding:6px 10px;border-radius:4px;border:1px solid ${legendBorder};backdrop-filter:blur(4px);align-items:center;">
@@ -355,7 +355,7 @@ const ChartPanel = forwardRef(function ChartPanel({
         console.log('Drawing line at price:', price);
         const line = seriesRef.current.createPriceLine({
           price: price,
-          color: theme === 'dark' ? '#e3b341' : '#d29922',
+          color: theme === 'dark' ? '#2f81f7' : '#2f81f7',
           lineWidth: 2,
           lineStyle: 0,
           axisLabelVisible: true,
@@ -461,6 +461,15 @@ const ChartPanel = forwardRef(function ChartPanel({
         if (callIvRef.current) callIvRef.current.setData([]);
         if (putIvRef.current) putIvRef.current.setData([]);
         if (combIvRef.current) combIvRef.current.setData([]);
+      } catch { }
+    },
+    // Seed the combined-IV overlay from persisted points. IV has no REST
+    // history (only live WS ticks provide it), so on refresh we restore the
+    // previously-streamed IV line instead of leaving it blank.
+    seedIv(points) {
+      if (!points?.length || !combIvRef.current) return;
+      try {
+        combIvRef.current.setData(points.map(p => ({ time: p.time, value: p.value })));
       } catch { }
     },
     clearData() {
@@ -587,7 +596,7 @@ const ChartPanel = forwardRef(function ChartPanel({
 
           <div style={{ width: 1, background: 'var(--border)', margin: '4px 4px' }} />
 
-          <button title="Draw S/R Line" className="tv-btn" onClick={toggleDrawMode} style={{ color: drawMode ? '#e3b341' : 'var(--text-dim)', background: drawMode ? 'rgba(227, 179, 65, 0.15)' : 'transparent' }}>
+          <button title="Draw S/R Line" className="tv-btn" onClick={toggleDrawMode} style={{ color: drawMode ? '#2f81f7' : 'var(--text-dim)', background: drawMode ? 'rgba(47, 129, 247, 0.15)' : 'transparent' }}>
             <PenLine size={16} strokeWidth={2} />
           </button>
 
@@ -904,6 +913,11 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   const [alertPopoverOpen, setAlertPopoverOpen] = useState(false);
 
   const triggeredAlerts = useRef(new Set());
+  // Combined-IV overlay persistence: IV comes only from live ticks (no REST
+  // history), so we cache the streamed points per strategy and re-seed on load.
+  const ivHistRef = useRef([]);
+  const ivKeyRef = useRef(null);
+  const ivSaveTickRef = useRef(0);
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((msg, type = 'alert') => {
@@ -1187,6 +1201,22 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
     lastComb.current = current;
     combRef.current?.update(current);
+
+    // Accumulate the combined-IV point and persist (throttled) so the overlay
+    // can be restored on refresh — IV is live-only, absent from REST history.
+    if (current.callIv != null && current.putIv != null) {
+      const combIv = current.callIv + current.putIv;
+      if (!isNaN(combIv)) {
+        const hist = ivHistRef.current;
+        const last = hist[hist.length - 1];
+        if (last && last.time === current.time) last.value = combIv;
+        else hist.push({ time: current.time, value: combIv });
+        if (hist.length > 600) hist.shift();
+        if (ivKeyRef.current && (++ivSaveTickRef.current % 5 === 0)) {
+          try { localStorage.setItem(ivKeyRef.current, JSON.stringify(hist)); } catch { }
+        }
+      }
+    }
   }, []);
   // ── START MONITORING ──────────────────────────────────────────────────────
   const startMonitoring = useCallback(async () => {
@@ -1233,6 +1263,15 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
       combRef.current?.clearIvData();
 
       combRef.current?.setData(sumCandles(cCandles, pCandles), true);
+
+      // Restore the combined-IV overlay from the persisted cache (IV has no REST
+      // history), then live ticks continue appending to it.
+      try {
+        const ivKey = `${userKey}_vitti_charts_ivhist_${selectedWatchId}_${tf}_${priceType}`;
+        const saved = JSON.parse(localStorage.getItem(ivKey) || '[]');
+        ivHistRef.current = Array.isArray(saved) ? saved : [];
+        if (ivHistRef.current.length) combRef.current?.seedIv(ivHistRef.current);
+      } catch { ivHistRef.current = []; }
 
       setActiveCall(cSym);
       setActivePut(pSym);
@@ -1546,7 +1585,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
       setErrMsg('Error: ' + e.message);
       setPhase('idle');
     }
-  }, [selectedWatchId, tf, priceType, updateComb, addToast]);
+  }, [selectedWatchId, tf, priceType, updateComb, addToast, userKey]);
 
   // Trigger startMonitoring whenever selectedWatchId changes
   useEffect(() => {
@@ -1570,6 +1609,11 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   // ── Rolling premium history for context-bar sparklines ───────────────
   const premHistRef = useRef({ call: [], put: [], comb: [] });
   useEffect(() => { premHistRef.current = { call: [], put: [], comb: [] }; }, [selectedWatchId, underlying]);
+
+  // Storage key for the persisted combined-IV overlay (per strategy + tf + price type).
+  useEffect(() => {
+    ivKeyRef.current = selectedWatchId ? `${userKey}_vitti_charts_ivhist_${selectedWatchId}_${tf}_${priceType}` : null;
+  }, [userKey, selectedWatchId, tf, priceType]);
   useEffect(() => {
     const push = (arr, v) => { if (v == null || isNaN(v)) return; arr.push(v); if (arr.length > 40) arr.shift(); };
     const h = premHistRef.current;
@@ -1637,15 +1681,15 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
         {toasts.map(t => (
           <div key={t.id} style={{
             background: theme === 'dark' ? 'rgba(10, 13, 18, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-            border: `1px solid ${theme === 'dark' ? 'rgba(227, 179, 65, 0.3)' : 'rgba(227, 179, 65, 0.6)'}`,
-            borderLeft: '4px solid #e3b341',
+            border: `1px solid ${theme === 'dark' ? 'rgba(47, 129, 247, 0.3)' : 'rgba(47, 129, 247, 0.6)'}`,
+            borderLeft: '4px solid #2f81f7',
             padding: '12px 16px', borderRadius: 8,
             color: theme === 'dark' ? '#fff' : '#1e2329',
             fontSize: 12, fontFamily: 'JetBrains Mono, monospace',
             boxShadow: theme === 'dark' ? '0 12px 32px rgba(0,0,0,0.7)' : '0 12px 32px rgba(0,0,0,0.15)',
             animation: 'slideIn 0.3s ease-out'
           }}>
-            <div style={{ color: '#e3b341', fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, letterSpacing: 1 }}>
+            <div style={{ color: '#2f81f7', fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, letterSpacing: 1 }}>
               <Bell size={14} strokeWidth={2.5} />
               ALERT TRIGGERED
             </div>
@@ -1790,7 +1834,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
           <div style={{ fontFamily: 'JetBrains Mono', fontSize: 16, fontWeight: 700, color: theme === 'dark' ? '#e6edf3' : '#1e2730', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Spot</span>
-            <span style={{ color: '#e3b341', marginLeft: 2 }}>{spotPrice ? spotPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
+            <span style={{ color: '#2f81f7', marginLeft: 2 }}>{spotPrice ? spotPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
 
             <button
               type="button"
@@ -1995,7 +2039,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             title={formatCombinedTitle(activeCall, activePut, priceType)}
             colorUp="#3fb950"
             colorDown="#f85149"
-            iconColor="#e3b341"
+            iconColor="#2f81f7"
             alerts={watchList.find(w => w.id === selectedWatchId)?.alerts || []}
             showIvCall={true}
             showIvPut={true}
@@ -2037,7 +2081,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                   display: 'flex', flexDirection: 'column', gap: 2
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e3b341', fontWeight: 800, fontSize: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#2f81f7', fontWeight: 800, fontSize: 10 }}>
                       <Bell size={10} strokeWidth={3} />
                       TRIGGERED
                     </div>

@@ -28,11 +28,8 @@ export default function SignInPage() {
 
   return (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      width: '100vw',
+      width: '100%',
+      minHeight: '100vh',
       background: 'var(--bg)',
       position: 'relative'
     }}>

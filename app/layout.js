@@ -1,5 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import "./globals.css"; // auth split-screen styles appended below the base tokens (rev)
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,8 +12,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Crypto Option Scanner",
-  description: "Crypto Options Scanner platform for the fellow traders",
+  title: "Jodi Crypto Scanner",
+  description: "Jodi Crypto Scanner platform for the fellow traders",
 };
 
 export default function RootLayout({ children }) {
