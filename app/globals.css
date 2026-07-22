@@ -7030,3 +7030,127 @@ body.light-theme .si-google:hover {
   .si-btn:hover:not(:disabled) .si-shine { transition: none; }
   .si-flip { transition: height 0.3s ease !important; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   NOTIFICATIONS — toasts + signal log (clean, token-driven)
+   ══════════════════════════════════════════════════════════ */
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 300px;
+  padding: 12px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.55);
+  animation: slideIn 0.25s ease-out;
+}
+
+.toast-ic {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.toast.alert .toast-ic { color: #58a6ff; background: rgba(47, 129, 247, 0.14); }
+.toast.info .toast-ic { color: var(--call); background: rgba(14, 203, 129, 0.14); }
+
+.toast-body { min-width: 0; }
+
+.toast-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.toast-msg {
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.45;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+/* ── Signal Log drawer ── */
+.signal-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 4px 6px;
+  border-radius: 5px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.signal-clear:hover { color: var(--put); background: rgba(246, 70, 93, 0.1); }
+
+.signal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.signal-row:last-child { border-bottom: none; }
+
+.signal-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: #58a6ff;
+  background: rgba(47, 129, 247, 0.12);
+}
+
+.signal-body { flex: 1; min-width: 0; }
+
+.signal-msg {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.signal-time {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+.signal-empty {
+  text-align: center;
+  padding: 44px 24px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.signal-empty-ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+}

@@ -1,5 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css"; // auth split-screen styles appended below the base tokens (rev)
+import "./globals.css"; // auth split-screen styles appended below the base tokens (rev2)
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

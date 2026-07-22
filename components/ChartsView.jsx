@@ -10,7 +10,7 @@ import {
   createWS, TF_SECS
 } from '../lib/api';
 import { useTabListener } from '../lib/useTabSync';
-import { Plus, X, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown, PenLine, Undo2, Trash2, ZoomIn, ZoomOut, Maximize2, Maximize, Minimize, Bell } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown, PenLine, Undo2, Trash2, ZoomIn, ZoomOut, Maximize2, Maximize, Minimize, Bell, Clock, Check } from 'lucide-react';
 import CustomSelect from './common/CustomSelect';
 import CustomInput from './common/CustomInput';
 
@@ -64,13 +64,48 @@ const formatCombinedTitle = (callSym, putSym, priceType) => {
   return `COMBINED PREMIUM (${priceType.toUpperCase()}) · ${typeC}-${strikeC} + ${typeP}-${strikeP} · ${asset}-${expiry}`;
 };
 
+// ── Timezone display ──────────────────────────────────────────────────────────
+// Chart time values are UTC unix-seconds; we format them in the chosen IANA zone
+// for the axis ticks and the crosshair readout (lightweight-charts has no native
+// timezone support, so we drive it via formatters).
+const TZ_OPTIONS = [
+  { label: 'UTC', value: 'UTC' },
+  { label: 'IST — India (UTC+5:30)', value: 'Asia/Kolkata' },
+  { label: 'New York (ET)', value: 'America/New_York' },
+  { label: 'London (UK)', value: 'Europe/London' },
+  { label: 'Dubai (GST)', value: 'Asia/Dubai' },
+  { label: 'Singapore (SGT)', value: 'Asia/Singapore' },
+  { label: 'Tokyo (JST)', value: 'Asia/Tokyo' },
+  { label: 'Browser Local', value: 'local' },
+];
+
+const resolveTz = (tz) => (tz === 'local' ? Intl.DateTimeFormat().resolvedOptions().timeZone : tz) || 'UTC';
+
+const makeTickMarkFormatter = (tz) => {
+  const timeZone = resolveTz(tz);
+  return (time, tickMarkType) => {
+    const d = new Date(time * 1000);
+    // 0 Year · 1 Month · 2 DayOfMonth · 3 Time · 4 TimeWithSeconds
+    if (tickMarkType === 0) return new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric' }).format(d);
+    if (tickMarkType === 1) return new Intl.DateTimeFormat('en-US', { timeZone, month: 'short' }).format(d);
+    if (tickMarkType === 2) return new Intl.DateTimeFormat('en-US', { timeZone, day: '2-digit', month: 'short' }).format(d);
+    if (tickMarkType === 4) return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(d);
+    return new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+  };
+};
+
+const makeTimeFormatter = (tz) => {
+  const timeZone = resolveTz(tz);
+  return (time) => new Intl.DateTimeFormat('en-GB', { timeZone, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(time * 1000));
+};
+
 // ── ChartPanel ────────────────────────────────────────────────────────────────
 // Always mounted (never unmounts), shown/hidden via CSS by parent.
 // Exposes setData() and update() via ref.
 const ChartPanel = forwardRef(function ChartPanel({
   title, colorUp, colorDown, iconColor,
   alerts = [],
-  showIvCall, showIvPut, theme, visible = true
+  showIvCall, showIvPut, theme, visible = true, timezone = 'UTC'
 }, ref) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -285,6 +320,15 @@ const ChartPanel = forwardRef(function ChartPanel({
 
     return () => { ro.disconnect(); chart.remove(); };
   }, []); // mount once, never destroy until page unloads
+
+  // Apply the display timezone to axis ticks + crosshair time readout.
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({
+      localization: { timeFormatter: makeTimeFormatter(timezone) },
+      timeScale: { tickMarkFormatter: makeTickMarkFormatter(timezone) },
+    });
+  }, [timezone]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -665,6 +709,66 @@ const ChartPanel = forwardRef(function ChartPanel({
 });
 
 // ── App ───────────────────────────────────────────────────────────────────────
+// Professional/simple sidebar polish. Injected as a scoped <style> (higher
+// specificity than the base .card/.btn-start rules) so it renders even while
+// the dev server's globals.css bundle is stale. Migrate to globals.css later.
+const SIDEBAR_STYLE = `
+.sidebar { gap: 14px; }
+/* On mobile the wrapper is transparent so nothing about that layout changes. */
+.sidebar-scroll { display: contents; }
+
+@media (min-width: 901px) {
+  /* Sidebar becomes: [scrollable content] + [right-edge vertical toggle bar]. */
+  .sidebar { flex-direction: row; padding: 0; gap: 0; overflow: hidden; align-items: stretch; }
+  .sidebar-scroll {
+    display: flex; flex-direction: column; gap: 14px;
+    flex: 1; min-width: 0; padding: 14px; overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .sidebar-scroll::-webkit-scrollbar { display: none; }        /* hide scrollbar (Chrome) */
+  .sidebar.rail-collapsed .sidebar-scroll { display: none; }
+
+  /* Vertical handle bar — same affordance to open (collapsed) and close (open). */
+  .sidebar .sidebar-rail-toggle {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    width: 28px; flex-shrink: 0; align-self: stretch;
+    background: var(--bg); border: none; border-left: 1px solid var(--border); border-radius: 0;
+    color: var(--text-dim); cursor: pointer; padding: 0;
+    transition: color 0.15s, background 0.15s;
+  }
+  .sidebar .sidebar-rail-toggle:hover { color: #2f81f7; background: var(--bg3); }
+  .sidebar .sidebar-rail-toggle .rail-vertical-label {
+    writing-mode: vertical-rl; text-orientation: mixed;
+    letter-spacing: 2px; font-size: 9px; font-weight: 700; text-transform: uppercase;
+  }
+  .sidebar.rail-collapsed { width: 46px; min-width: 46px; padding: 0; }
+  .sidebar.rail-collapsed .sidebar-rail-toggle { flex: 1; border-left: none; }
+}
+.sidebar .card { box-shadow: none; border-radius: 12px; padding: 16px; }
+.sidebar .card-title { color: var(--text); }
+.sidebar .config-section-label { color: var(--text-dim); }
+.sidebar .config-section-label::before { width: 3px; height: 11px; border-radius: 2px; }
+.sidebar .config-divider { margin: 4px 0; opacity: 0.55; }
+.sidebar label { margin-bottom: 6px; }
+.sidebar .custom-dropdown-trigger { background: var(--bg); border-radius: 8px; min-height: 38px; font-weight: 500; }
+.sidebar .custom-dropdown-trigger:hover,
+.sidebar .custom-dropdown-container.open .custom-dropdown-trigger { border-color: rgba(47, 129, 247, 0.55); }
+.sidebar .seg { height: 38px; border-radius: 8px; width: 100%; }
+.sidebar .seg > button { flex: 1; }
+.sidebar .btn-start {
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  border: none; border-radius: 10px; color: #fff;
+  font-weight: 600; letter-spacing: 0.4px; padding: 12px 14px;
+  box-shadow: 0 10px 24px -12px rgba(37, 99, 235, 0.7);
+}
+.sidebar .btn-start:hover:not(:disabled) {
+  background: linear-gradient(90deg, #3b82f6, #58a6ff);
+  box-shadow: 0 14px 30px -12px rgba(59, 130, 246, 0.6);
+  transform: translateY(-1px);
+}
+.sidebar .btn-start:disabled { opacity: 0.5; box-shadow: none; }
+`;
+
 export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarProps, userKey }) {
   const [isConfigCollapsed, setIsConfigCollapsed] = useState(false);
   useEffect(() => { setIsConfigCollapsed(window.innerWidth <= 900); }, []);
@@ -673,6 +777,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   const [underlying, setUnderlying] = useState('BTC');
   const [tf, setTf] = useState('1m');
   const [priceType, setPriceType] = useState('mark');
+  const [timezone, setTimezone] = useState('UTC');
 
   const [products, setProducts] = useState([]);
   const [expiries, setExpiries] = useState([]);
@@ -706,6 +811,9 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
     const savedPriceType = localStorage.getItem(`${userKey}_vitti_charts_price_type`);
     if (savedPriceType) setPriceType(savedPriceType);
+
+    const savedTz = localStorage.getItem(`${userKey}_vitti_charts_timezone`);
+    if (savedTz) setTimezone(savedTz);
 
     const savedLegType = localStorage.getItem(`${userKey}_vitti_charts_leg_type`);
     if (savedLegType) setLegType(savedLegType);
@@ -741,6 +849,12 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
       localStorage.setItem(`${userKey}_vitti_charts_price_type`, priceType);
     }
   }, [priceType, isLoaded, userKey]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(`${userKey}_vitti_charts_timezone`, timezone);
+    }
+  }, [timezone, isLoaded, userKey]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -917,7 +1031,6 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   // history), so we cache the streamed points per strategy and re-seed on load.
   const ivHistRef = useRef([]);
   const ivKeyRef = useRef(null);
-  const ivSaveTickRef = useRef(0);
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((msg, type = 'alert') => {
@@ -925,12 +1038,21 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
     setToasts(t => [...t, { id, msg, type }]);
 
     if (type === 'alert') {
+      const logId = uid();
+      const ts = Date.now();
       setAlertLogs(prev => [{
-        id: uid(),
-        time: new Date().toLocaleTimeString(),
+        id: logId,
+        time: new Date(ts).toLocaleTimeString(),
         msg
       }, ...prev].slice(0, 50));
       setUnreadAlerts(n => n + 1);
+      // Persist to the server-side alert history so it survives refresh.
+      fetch('/api/alert-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: logId, createdAt: ts, type: 'alert', message: msg }),
+      }).catch(() => { });
     }
 
     setTimeout(() => {
@@ -1053,7 +1175,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
                     const name = w.type === 'combined' ? `STRADDLE ${w.callStrike}/${w.putStrike}`
                       : w.type === 'call' ? `CALL ${w.callStrike}C`
                         : `PUT ${w.putStrike}P`;
-                    addToast(`Watchlist Alert: ${name} ${alertObj.dir} ${target} (Hit: ${newPrice.toFixed(2)})`);
+                    addToast(`${name} ${alertObj.dir} ${target} · hit ${newPrice.toFixed(2)}`);
 
                     // Auto-remove triggered alert
                     setWatchList(prevW => prevW.map(item =>
@@ -1202,20 +1324,14 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
     lastComb.current = current;
     combRef.current?.update(current);
 
-    // Accumulate the combined-IV point and persist (throttled) so the overlay
-    // can be restored on refresh — IV is live-only, absent from REST history.
-    if (current.callIv != null && current.putIv != null) {
-      const combIv = current.callIv + current.putIv;
-      if (!isNaN(combIv)) {
-        const hist = ivHistRef.current;
-        const last = hist[hist.length - 1];
-        if (last && last.time === current.time) last.value = combIv;
-        else hist.push({ time: current.time, value: combIv });
-        if (hist.length > 600) hist.shift();
-        if (ivKeyRef.current && (++ivSaveTickRef.current % 5 === 0)) {
-          try { localStorage.setItem(ivKeyRef.current, JSON.stringify(hist)); } catch { }
-        }
-      }
+    // Accumulate the combined-IV point (call+put per candle). IV is live-only
+    // — absent from REST history — so we buffer it and flush to the DB.
+    if (current.callIv != null && current.putIv != null && !isNaN(current.callIv + current.putIv)) {
+      const hist = ivHistRef.current;
+      const last = hist[hist.length - 1];
+      if (last && last.t === current.time) { last.callIv = current.callIv; last.putIv = current.putIv; }
+      else hist.push({ t: current.time, callIv: current.callIv, putIv: current.putIv });
+      if (hist.length > 800) hist.shift();
     }
   }, []);
   // ── START MONITORING ──────────────────────────────────────────────────────
@@ -1264,13 +1380,17 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
 
       combRef.current?.setData(sumCandles(cCandles, pCandles), true);
 
-      // Restore the combined-IV overlay from the persisted cache (IV has no REST
-      // history), then live ticks continue appending to it.
+      // Restore the combined-IV overlay from the DB (IV has no REST history),
+      // then live ticks continue appending to it.
       try {
-        const ivKey = `${userKey}_vitti_charts_ivhist_${selectedWatchId}_${tf}_${priceType}`;
-        const saved = JSON.parse(localStorage.getItem(ivKey) || '[]');
-        ivHistRef.current = Array.isArray(saved) ? saved : [];
-        if (ivHistRef.current.length) combRef.current?.seedIv(ivHistRef.current);
+        const ivKey = `${selectedWatchId}_${tf}_${priceType}`;
+        const res = await fetch(`/api/iv-history?key=${encodeURIComponent(ivKey)}`, { credentials: 'include' });
+        const data = res.ok ? await res.json() : null;
+        const pts = Array.isArray(data?.points) ? data.points : [];
+        ivHistRef.current = pts;
+        if (pts.length) {
+          combRef.current?.seedIv(pts.map(p => ({ time: p.t, value: (p.callIv || 0) + (p.putIv || 0) })));
+        }
       } catch { ivHistRef.current = []; }
 
       setActiveCall(cSym);
@@ -1610,10 +1730,46 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   const premHistRef = useRef({ call: [], put: [], comb: [] });
   useEffect(() => { premHistRef.current = { call: [], put: [], comb: [] }; }, [selectedWatchId, underlying]);
 
-  // Storage key for the persisted combined-IV overlay (per strategy + tf + price type).
+  // Server-side key for the persisted combined-IV overlay (per strategy + tf +
+  // price type). The user is scoped by session on the server, not in the key.
   useEffect(() => {
-    ivKeyRef.current = selectedWatchId ? `${userKey}_vitti_charts_ivhist_${selectedWatchId}_${tf}_${priceType}` : null;
-  }, [userKey, selectedWatchId, tf, priceType]);
+    ivKeyRef.current = selectedWatchId ? `${selectedWatchId}_${tf}_${priceType}` : null;
+  }, [selectedWatchId, tf, priceType]);
+
+  // Flush accumulated IV points to the DB on an interval + when the tab hides.
+  useEffect(() => {
+    const flush = (keepalive = false) => {
+      const key = ivKeyRef.current;
+      const points = ivHistRef.current;
+      if (!key || !points.length) return;
+      fetch('/api/iv-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        keepalive,
+        body: JSON.stringify({ key, points }),
+      }).catch(() => { });
+    };
+    const timer = setInterval(() => flush(false), 20000);
+    const onHidden = () => { if (document.visibilityState === 'hidden') flush(true); };
+    document.addEventListener('visibilitychange', onHidden);
+    window.addEventListener('pagehide', () => flush(true));
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', onHidden); flush(false); };
+  }, []);
+
+  // Load persisted alert history (server-side) once the session key is known.
+  useEffect(() => {
+    if (!isLoaded) return;
+    let cancelled = false;
+    fetch('/api/alert-history', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (cancelled || !d?.logs) return;
+        setAlertLogs(d.logs.map(l => ({ id: l.id, time: new Date(l.time).toLocaleTimeString(), msg: l.msg })));
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [isLoaded, userKey]);
   useEffect(() => {
     const push = (arr, v) => { if (v == null || isNaN(v)) return; arr.push(v); if (arr.length > 40) arr.shift(); };
     const h = premHistRef.current;
@@ -1671,46 +1827,55 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
     if (!d.price) return;
     setWatchList(prev => prev.map(w => w.id === selectedItem.id ? { ...w, alerts: [...(w.alerts || []), { id: uid(), dir: d.dir, price: d.price }] } : w));
     setCardAlertDrafts(prev => ({ ...prev, [selectedItem.id]: { dir: d.dir, price: '' } }));
-    addToast(`Alert set: ${d.dir} ${d.price}`, 'info');
+    addToast(`${d.dir} ${d.price}`, 'info');
   };
 
   return (
     <div className="app">
+      <style dangerouslySetInnerHTML={{ __html: SIDEBAR_STYLE }} />
       {/* Toast Container */}
       <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none' }}>
-        {toasts.map(t => (
-          <div key={t.id} style={{
-            background: theme === 'dark' ? 'rgba(10, 13, 18, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-            border: `1px solid ${theme === 'dark' ? 'rgba(47, 129, 247, 0.3)' : 'rgba(47, 129, 247, 0.6)'}`,
-            borderLeft: '4px solid #2f81f7',
-            padding: '12px 16px', borderRadius: 8,
-            color: theme === 'dark' ? '#fff' : '#1e2329',
-            fontSize: 12, fontFamily: 'JetBrains Mono, monospace',
-            boxShadow: theme === 'dark' ? '0 12px 32px rgba(0,0,0,0.7)' : '0 12px 32px rgba(0,0,0,0.15)',
-            animation: 'slideIn 0.3s ease-out'
-          }}>
-            <div style={{ color: '#2f81f7', fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8, letterSpacing: 1 }}>
-              <Bell size={14} strokeWidth={2.5} />
-              ALERT TRIGGERED
+        {toasts.map(t => {
+          const isInfo = t.type === 'info';
+          return (
+            <div key={t.id} style={{
+              pointerEvents: 'auto', display: 'flex', alignItems: 'flex-start', gap: 11,
+              width: 300, padding: '12px 14px',
+              background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10,
+              boxShadow: '0 14px 34px -14px rgba(0,0,0,0.55)', animation: 'slideIn 0.25s ease-out',
+            }}>
+              <span style={{
+                width: 28, height: 28, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0,
+                color: isInfo ? 'var(--call)' : '#58a6ff',
+                background: isInfo ? 'rgba(14,203,129,0.14)' : 'rgba(47,129,247,0.14)',
+              }}>
+                {isInfo ? <Check size={15} strokeWidth={2.5} /> : <Bell size={15} strokeWidth={2.5} />}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>{isInfo ? 'Alert set' : 'Alert triggered'}</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 11.5, color: 'var(--text-dim)', lineHeight: 1.45, marginTop: 2, overflowWrap: 'anywhere' }}>{t.msg}</div>
+              </div>
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => setToasts(list => list.filter(x => x.id !== t.id))}
+                style={{
+                  flexShrink: 0, marginTop: -2, marginRight: -4, background: 'none', border: 'none',
+                  cursor: 'pointer', color: 'var(--text-dim)', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', width: 20, height: 20, borderRadius: 5, padding: 0,
+                }}
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
             </div>
-            <div style={{ color: theme === 'dark' ? '#e6edf3' : '#4b5563', lineHeight: 1.5, opacity: 0.9 }}>{t.msg}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="body">
         {/* Sidebar */}
         <aside className={`sidebar ${railCollapsed ? 'rail-collapsed' : ''}`}>
-          <button
-            type="button"
-            className="sidebar-rail-toggle"
-            onClick={() => setRailCollapsed(c => !c)}
-            title={railCollapsed ? 'Expand builder' : 'Collapse builder'}
-          >
-            {railCollapsed
-              ? <><ChevronsRight size={16} strokeWidth={2.5} /><span className="rail-vertical-label">BUILD</span></>
-              : <><ChevronLeft size={14} strokeWidth={2.5} /><span>Collapse</span></>}
-          </button>
+          <div className="sidebar-scroll">
           <div className="card" style={{ padding: '12px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isConfigCollapsed ? 0 : '10px' }}>
               <span className="card-title" style={{ margin: 0 }}>INSTRUMENT SETUP</span>
@@ -1826,7 +1991,18 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
           </button>
 
           {errMsg && <div style={{ color: '#f85149', fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>{errMsg}</div>}
+          </div>
 
+          <button
+            type="button"
+            className="sidebar-rail-toggle"
+            onClick={() => setRailCollapsed(c => !c)}
+            title={railCollapsed ? 'Expand builder' : 'Collapse builder'}
+          >
+            {railCollapsed
+              ? <><ChevronsRight size={16} strokeWidth={2.5} /><span className="rail-vertical-label">BUILD</span></>
+              : <><ChevronLeft size={14} strokeWidth={2.5} /><span className="rail-vertical-label">CLOSE</span></>}
+          </button>
         </aside>
 
         {/* Chart area — charts ALWAYS mounted, overlay sits on top */}
@@ -1836,25 +2012,37 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Spot</span>
             <span style={{ color: '#2f81f7', marginLeft: 2 }}>{spotPrice ? spotPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
 
-            <button
-              type="button"
-              title="Alert signal log"
-              onClick={() => { setAlertDrawerOpen(true); setUnreadAlerts(0); }}
-              style={{
-                marginLeft: 'auto', position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 34, height: 34, borderRadius: 8, cursor: 'pointer',
-                background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)'
-              }}
-            >
-              <Bell size={16} strokeWidth={2} />
-              {unreadAlerts > 0 && (
-                <span style={{
-                  position: 'absolute', top: -5, right: -5, minWidth: 16, height: 16, padding: '0 4px',
-                  borderRadius: 8, background: '#f85149', color: '#fff', fontSize: 9, fontWeight: 800,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1
-                }}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</span>
-              )}
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Chart display timezone">
+                <Clock size={14} strokeWidth={2} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
+                <CustomSelect
+                  value={timezone}
+                  onChange={val => setTimezone(val)}
+                  options={TZ_OPTIONS}
+                  style={{ width: 200 }}
+                />
+              </div>
+
+              <button
+                type="button"
+                title="Alert signal log"
+                onClick={() => { setAlertDrawerOpen(true); setUnreadAlerts(0); }}
+                style={{
+                  position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 34, borderRadius: 8, cursor: 'pointer', flexShrink: 0,
+                  background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)'
+                }}
+              >
+                <Bell size={16} strokeWidth={2} />
+                {unreadAlerts > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -5, right: -5, minWidth: 16, height: 16, padding: '0 4px',
+                    borderRadius: 8, background: '#f85149', color: '#fff', fontSize: 9, fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1
+                  }}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Strategy switcher — compact selectable chips (replaces stacked cards) */}
@@ -2044,6 +2232,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             showIvCall={true}
             showIvPut={true}
             theme={theme}
+            timezone={timezone}
           />
 
           {/* Alert Signal Log — right drawer, opened from the header bell */}
@@ -2066,28 +2255,34 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text)' }}>
                 <Bell size={14} strokeWidth={2.5} /> Signal Log
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span onClick={() => setAlertLogs([])} style={{ fontSize: 9, cursor: 'pointer', opacity: 0.6, letterSpacing: 1, textTransform: 'uppercase' }}>Clear All</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {alertLogs.length > 0 && (
+                  <button type="button" onClick={() => { setAlertLogs([]); fetch('/api/alert-history', { method: 'DELETE', credentials: 'include' }).catch(() => { }); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 10, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-dim)', padding: '4px 6px', borderRadius: 5 }}>Clear</button>
+                )}
                 <div onClick={() => setAlertDrawerOpen(false)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: 0.7 }}>
                   <X size={16} strokeWidth={2.5} />
                 </div>
               </div>
             </div>
             <div className="trade-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px' }}>
-              {!alertLogs.length && <div style={{ textAlign: 'center', padding: 20, color: '#484f58', fontSize: 11 }}>No signals fired yet. Set a price alert to get started.</div>}
-              {alertLogs.map(log => (
-                <div key={log.id} style={{
-                  padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 11,
-                  display: 'flex', flexDirection: 'column', gap: 2
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#2f81f7', fontWeight: 800, fontSize: 10 }}>
-                      <Bell size={10} strokeWidth={3} />
-                      TRIGGERED
-                    </div>
-                    <span style={{ color: '#7d8590', fontSize: 10 }}>{log.time}</span>
+              {!alertLogs.length && (
+                <div style={{ textAlign: 'center', padding: '44px 24px', color: 'var(--text-dim)', fontFamily: 'Inter, sans-serif', fontSize: 12, lineHeight: 1.5 }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 13, margin: '0 auto 12px', display: 'grid', placeItems: 'center', color: 'var(--text-dim)', background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+                    <Bell size={20} strokeWidth={2} />
                   </div>
-                  <div style={{ color: theme === 'dark' ? '#e6edf3' : '#1e2329', lineHeight: 1.4 }}>{log.msg}</div>
+                  No alerts yet.<br />Set a price alert to start tracking signals.
+                </div>
+              )}
+              {alertLogs.map(log => (
+                <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 2px', borderBottom: '1px solid var(--border)' }}>
+                  <span style={{ width: 26, height: 26, borderRadius: 7, flexShrink: 0, display: 'grid', placeItems: 'center', color: '#58a6ff', background: 'rgba(47,129,247,0.12)' }}>
+                    <Bell size={13} strokeWidth={2.5} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--text)', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{log.msg}</div>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: 'var(--text-dim)', marginTop: 3 }}>{log.time}</div>
+                  </div>
                 </div>
               ))}
             </div>
