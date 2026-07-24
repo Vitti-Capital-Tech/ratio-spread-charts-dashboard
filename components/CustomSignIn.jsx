@@ -286,6 +286,12 @@ export default function CustomSignIn() {
 
     setLoading(true);
     try {
+      // Clear any stale/invalid session cookie first. After a DB migration the
+      // browser can still hold a signature-valid cookie whose session no longer
+      // exists in the new DB; better-auth leaves it in place, which blocks a
+      // clean re-login (users otherwise have to manually clear cookies).
+      await authClient.signOut().catch(() => {});
+
       // OTP bypass: the secret access word signs in directly, skipping OTP.
       // The server validates it against BYPASS_WORD.
       if (!input.includes('@')) {
