@@ -51,6 +51,14 @@ export default function Workspace({ defaultTab }) {
 
   const { data: session, isPending } = authClient.useSession();
 
+  // Auth gate: once the session check resolves, bounce unauthenticated users to
+  // the sign-in page (the app has no middleware, and "/" redirects here blindly).
+  useEffect(() => {
+    if (!isPending && !session?.user) {
+      window.location.href = '/sign-in';
+    }
+  }, [isPending, session]);
+
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
     const newPath = newTab === 'charts' ? '/charts' : '/ratio-spread';
@@ -59,7 +67,7 @@ export default function Workspace({ defaultTab }) {
     }
   };
 
-  if (isPending) {
+  if (isPending || !session?.user) {
     return (
       <div
         className="workspace-loader"

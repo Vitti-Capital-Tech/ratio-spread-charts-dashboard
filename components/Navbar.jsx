@@ -62,7 +62,7 @@ export default function Navbar({
     } catch (err) {
       console.error('Sign out error:', err);
     }
-    window.location.href = '/';
+    window.location.href = '/sign-in';
   };
 
   return (
