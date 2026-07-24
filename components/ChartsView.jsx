@@ -713,6 +713,20 @@ const ChartPanel = forwardRef(function ChartPanel({
 // specificity than the base .card/.btn-start rules) so it renders even while
 // the dev server's globals.css bundle is stale. Migrate to globals.css later.
 const SIDEBAR_STYLE = `
+/* Chart price-type tabs (Delta-style) */
+.chart-tabs { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.chart-tab {
+  position: relative; background: none; border: none; cursor: pointer;
+  padding: 9px 16px; font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 600;
+  color: var(--text-dim); transition: color 0.15s;
+}
+.chart-tab:hover { color: var(--text); }
+.chart-tab.on { color: var(--text); }
+.chart-tab.on::after {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 2px;
+  background: #2f81f7; border-radius: 2px 2px 0 0;
+}
+
 .sidebar { gap: 14px; }
 /* On mobile the wrapper is transparent so nothing about that layout changes. */
 .sidebar-scroll { display: contents; }
@@ -976,9 +990,15 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
   const [callPrice, setCallPrice] = useState(null);
   const [putPrice, setPutPrice] = useState(null);
   const [spotPrice, setSpotPrice] = useState(null);
+  // Which chart the tabs show: the option ('option') or the underlying ('underlying').
+  const [chartView, setChartView] = useState('option');
+  const [btcPhase, setBtcPhase] = useState('idle'); // idle | loading | ready | error
 
   // Chart refs — always valid since panels never unmount
   const combRef = useRef(null);
+  const btcRef = useRef(null);
+  const btcLastRef = useRef(null);
+  const btcPollerRef = useRef(null);
   const wsRef = useRef(null);
   const lastC = useRef(null);
   const lastP = useRef(null);
@@ -1736,6 +1756,46 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
     ivKeyRef.current = selectedWatchId ? `${selectedWatchId}_${tf}_${priceType}` : null;
   }, [selectedWatchId, tf, priceType]);
 
+  // ── Underlying (BTC/ETH) chart: fetch perp candles + poll spot for the live tip ──
+  useEffect(() => {
+    if (chartView !== 'underlying' || !underlying) return;
+    let alive = true;
+    const symbol = `${underlying}USD`;
+    const bSecs = TF_SECS[tf] || 60;
+    setBtcPhase('loading');
+    (async () => {
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const candles = await fetchCandles(symbol, tf, now - bSecs * 500, now, 'ltp');
+        if (!alive) return;
+        if (!candles.length) { setBtcPhase('error'); return; }
+        btcRef.current?.setData(candles, true);
+        btcLastRef.current = candles[candles.length - 1];
+        setBtcPhase('ready');
+      } catch {
+        if (alive) setBtcPhase('error');
+      }
+    })();
+    // Live tip: poll spot price and roll it into the forming candle.
+    btcPollerRef.current = setInterval(async () => {
+      const spot = await getSpotPrice(underlying);
+      if (!alive || spot == null) return;
+      const bucket = Math.floor((Date.now() / 1000) / bSecs) * bSecs;
+      let last = btcLastRef.current;
+      if (!last || bucket > last.time) {
+        last = { time: bucket, open: spot, high: spot, low: spot, close: spot };
+      } else {
+        last = { ...last, close: spot, high: Math.max(last.high, spot), low: Math.min(last.low, spot) };
+      }
+      btcLastRef.current = last;
+      btcRef.current?.update(last);
+    }, 4000);
+    return () => {
+      alive = false;
+      if (btcPollerRef.current) { clearInterval(btcPollerRef.current); btcPollerRef.current = null; }
+    };
+  }, [chartView, underlying, tf]);
+
   // Flush accumulated IV points to the DB on an interval + when the tab hides.
   useEffect(() => {
     const flush = (keepalive = false) => {
@@ -1964,18 +2024,6 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
               <div className="config-section-label">View</div>
 
               <div className="form-group">
-                <label>Price Feed</label>
-                <CustomSelect
-                  value={priceType}
-                  onChange={val => setPriceType(val)}
-                  options={[
-                    { label: 'Mark Price (Fair Value)', value: 'mark' },
-                    { label: 'LTP (Last Traded)', value: 'ltp' }
-                  ]}
-                />
-              </div>
-
-              <div className="form-group">
                 <label>Candle Timeframe</label>
                 <CustomSelect
                   value={tf}
@@ -2088,7 +2136,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
           </div>
 
           {/* Chart context bar — selected strategy's premiums, greeks & alerts */}
-          {selectedItem && (
+          {chartView === 'option' && selectedItem && (
             <div className="chart-context-bar">
               <div className="ctx-id">
                 <span className={`badge ${selectedItem.type === 'combined' ? 'comb' : selectedItem.type}`}>
@@ -2192,8 +2240,15 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             </div>
           )}
 
+          {/* Chart tabs (mirrors Delta's chart tabs) */}
+          <div className="chart-tabs">
+            <button type="button" className={`chart-tab ${chartView === 'option' && priceType === 'ltp' ? 'on' : ''}`} onClick={() => { setPriceType('ltp'); setChartView('option'); }}>Traded Price</button>
+            <button type="button" className={`chart-tab ${chartView === 'option' && priceType === 'mark' ? 'on' : ''}`} onClick={() => { setPriceType('mark'); setChartView('option'); }}>Mark Price</button>
+            <button type="button" className={`chart-tab ${chartView === 'underlying' ? 'on' : ''}`} onClick={() => setChartView('underlying')}>{underlying} Chart</button>
+          </div>
+
           {/* Idle/Loading overlay — rendered as a flex container taking remaining space */}
-          {(phase === 'idle' || phase === 'loading') && (
+          {chartView === 'option' && (phase === 'idle' || phase === 'loading') && (
             <div style={{
               flex: 1,
               display: 'flex', flexDirection: 'column',
@@ -2223,7 +2278,7 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
           {/* Combined chart — Always in DOM */}
           <ChartPanel
             ref={combRef}
-            visible={phase !== 'idle' && phase !== 'loading'}
+            visible={chartView === 'option' && phase !== 'idle' && phase !== 'loading'}
             title={formatCombinedTitle(activeCall, activePut, priceType)}
             colorUp="#3fb950"
             colorDown="#f85149"
@@ -2234,6 +2289,45 @@ export default function ChartsView({ onNavigate, theme, toggleTheme, setNavbarPr
             theme={theme}
             timezone={timezone}
           />
+
+          {/* Underlying (BTC/ETH) chart — Always in DOM */}
+          <ChartPanel
+            ref={btcRef}
+            visible={chartView === 'underlying' && btcPhase === 'ready'}
+            title={`${underlying}USD · ${tf}`}
+            colorUp="#3fb950"
+            colorDown="#f85149"
+            iconColor="#2f81f7"
+            alerts={[]}
+            showIvCall={false}
+            showIvPut={false}
+            theme={theme}
+            timezone={timezone}
+          />
+
+          {/* Underlying chart loading / error state */}
+          {chartView === 'underlying' && btcPhase !== 'ready' && (
+            <div style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              background: theme === 'dark' ? 'rgba(10,13,18,0.96)' : 'rgba(255,255,255,0.96)',
+              borderRadius: 8, border: '1px solid var(--border)', gap: 12, minHeight: 250,
+            }}>
+              {btcPhase === 'loading' && (
+                <div className="eq-bars" aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 4, height: 30 }}>
+                  {[14, 24, 30, 20, 12].map((h, n) => (
+                    <i key={n} style={{ width: 5, height: h, borderRadius: 2, background: 'var(--accent)', transformOrigin: 'bottom', display: 'block' }} />
+                  ))}
+                </div>
+              )}
+              <div style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 700, letterSpacing: 2 }}>
+                {btcPhase === 'error' ? 'CHART UNAVAILABLE' : `LOADING ${underlying} CHART…`}
+              </div>
+              <div style={{ fontSize: 12, color: '#7d8590', textAlign: 'center' }}>
+                {btcPhase === 'error' ? `Couldn't load ${underlying}USD candles from the exchange.` : 'Fetching candles from exchange…'}
+              </div>
+            </div>
+          )}
 
           {/* Alert Signal Log — right drawer, opened from the header bell */}
           {alertDrawerOpen && (

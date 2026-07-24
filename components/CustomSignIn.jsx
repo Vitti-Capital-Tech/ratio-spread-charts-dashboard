@@ -544,7 +544,7 @@ export default function CustomSignIn() {
               </div>
 
               <form onSubmit={(e) => { e.preventDefault(); verifyCode(); }}>
-                <div className="otp-splits-wrapper" onPaste={handleOtpPaste}>
+                <div className="otp-splits-wrapper" onPaste={handleOtpPaste} style={{ marginTop: 22 }}>
                   {otpArray.map((digit, index) => (
                     <input
                       key={index}
